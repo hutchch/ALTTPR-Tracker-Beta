@@ -1045,8 +1045,8 @@ document.addEventListener('DOMContentLoaded', function() {
 // ── Scale adjustment from bottom bar buttons ──────────────────────────────────
 function changeTrackerScale(delta) {
   var current = window._trackerScale || 1;
-  // 5% steps, clamped 70%–150% to match the Map scale control.
-  var next = Math.min(1.5, Math.max(0.7, Math.round((current + delta) * 20) / 20));
+  // 5% steps, clamped 50%–150% to match the Map scale control.
+  var next = Math.min(1.5, Math.max(0.5, Math.round((current + delta) * 20) / 20));
   window._trackerScale = next;
   document.body.style.zoom = next;
   // Resize window to fit new scale (same content-based measurement as launch).

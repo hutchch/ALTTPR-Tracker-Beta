@@ -3096,7 +3096,8 @@ var dotById = {};
 // Sanctuary Grave's item IS the Escape Sewers (3) check — so that dot stays on
 // the map too, in its own place, rather than being hung off the grave entrance.
 var ONLYADKD_CHECK = 65;   // Bottle Merchant
-var ONLYADKD_EXTRA_CHECKS = { 96: 1 };   // Escape Sewers (3) — Sanctuary Grave
+var ONLYADKD_EXTRA_CHECKS = { 96: 1,     // Escape Sewers (3) — Sanctuary Grave
+                              103: 1 };  // Master Sword Pedestal (Chris, Oct 2026)
 function onlyAdkd() {
   try {
     return (new URLSearchParams(location.search).get('preset') ||
@@ -7822,7 +7823,7 @@ function moveTip(e) {
 
 // ── Zoom + Layout ─────────────────────────────────────────────────────────────
 // Declare zoom state first so resizeWindowToMap can reference it
-var ZOOM_STEPS = [70, 75, 80, 85, 90, 95, 100, 105, 110, 115, 120, 125, 130, 135, 140, 145, 150];
+var ZOOM_STEPS = [50, 55, 60, 65, 70, 75, 80, 85, 90, 95, 100, 105, 110, 115, 120, 125, 130, 135, 140, 145, 150];
 var zoomIdx = 1;
 
 // Non-map chrome: topbar (~28px) + bottombar (~24px) + OS window chrome (~40px)
