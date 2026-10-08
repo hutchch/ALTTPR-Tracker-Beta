@@ -16,6 +16,11 @@ keys: the only key door past the bridge is the pair before the boss.
   front — without it the bridge reads out of logic. Entering from the back
   door (inverted) is unchanged: no key, big key or lamp needed.
 
+**Turtle Rock — Key Drop.**
+- Pokey 2 Key Drop: available on 3 keys (was possible on 3, available on 5).
+- Big Chest and Crystaroller Room: the big key and 3 keys → available (were
+  possible on 3, available on 5).
+
 **Eastern Palace — Key Drop.**
 - Big Key Chest: 1 key → possible, 2+ → available (was available on 1). The
   lamp is still needed; without it the chest reads out of logic.
@@ -25,10 +30,10 @@ keys: the only key door past the bridge is the pair before the boss.
   available on 2).
 - Attic and Boss: possible with 2 keys, available with 3 (were available on
   2).
-- Big Chest: one small key, the big key and the hammer, key drop or not (under
-  key drop it wanted three keys, possible on two).
-  With small keys unshuffled the card now waits for TT's one key to actually
-  be picked up — it sits in a chest, so it isn't free the way other unshuffled
+- Big Chest: the big key and the hammer, plus possible on 2 keys and
+  available on 3 under key drop. Without key drop it needs TT's one small key,
+  and with small keys unshuffled the card waits for that key to actually be
+  picked up — it sits in a chest, so it isn't free the way other unshuffled
   keys are. The map marker is unchanged.
   With Boss Shuffle on, the Boss needs only the big key (and the boss's own
   item), no key count.
@@ -213,6 +218,13 @@ label yet reads unavailable.
 
 ## Map window
 
+- **Scale down to 50%.** Map Scale and Item Scale in the launcher, the map's
+  −/+ zoom and the item tracker's scale buttons now go down to 50% (was 70%).
+  Below 100% the map's markers shrink with it (half size at 50%) so busy areas
+  don't pile up; at 100% and above they're unchanged.
+- **OnlyADKD: Master Sword Pedestal shown.** The mode hides every overworld
+  check except the Bottle Merchant and Sanctuary Grave; the pedestal is now
+  kept as well, with its usual logic.
 - **No scrollbar on launch.** The map area was 4px taller than the window in
   the side-by-side layout, and the stacked layout measured its bars before
   they had wrapped. The window now re-fits whenever either bar changes height.
@@ -237,18 +249,12 @@ label yet reads unavailable.
   (built-in or your own) move to the top of the list, marked ★, in the order
   you starred them. Click again to unstar.
 
-## You-are-here dot
+## Current dungeon
 
 The tracker now reads which dungeon the player is in (`$7E040C`, once a
-second with the rest of the autotracking):
+second with the rest of the autotracking). It feeds the API and the overlays;
+nothing in the item tracker or broadcast view shows it.
 
-- **Item tracker and broadcast view:** a small green dot beside the label of
-  the dungeon the player is in right now. It moves as they go and disappears
-  on the overworld and in ordinary caves; menus and text boxes keep it where
-  it was. Off by default: turn it on with **You Are Here Dot** under Dungeon
-  Background in the item tracker's settings and in Broadcast Settings (each
-  view has its own switch). Never shown in Race Mode, where the switch is
-  greyed out.
 - **Items API:** `GET /location` returns `{ dungeon, name }` (`null` outside),
   every `/dungeons/{id}` has an `inside` flag, and the overlay WebSocket gains
   a `tracker:location` channel plus `inside` on each dungeon. In the OpenAPI
@@ -280,6 +286,61 @@ falling back to `ow.png`; the world (`$7E008A`) is reported as `world`
 The overlay is a separate product: `overlays/` is left out of `npm run dist:*`
 builds and out of patches made with `tools/make-patch.js`. The tracker side
 (`/location`, `tracker:location`, `/overlay/config`) ships as normal.
+
+## Announce overlay (GT big key)
+
+A new OBS browser source, `overlays/announce.html`, that follows the runner:
+
+- **Outside dungeons:** "Overworld" and the item tracker's top row: crystals
+  (of 5), red crystals (of 2), pendants (of 2), green pendant, the pixel heart
+  filling with the pieces toward the next heart, and the check count. Caves count as overworld — the game doesn't
+  say which world a cave is in, so naming one would be wrong there.
+- **In a dungeon:** a card with the dungeon's name and floor, its prize,
+  chests and small keys, map / compass / big key and the boss — its picture
+  and name, ✓ when beaten (Agahnim has no picture, so CT and GT show the name).
+  Hyrule Castle and Agahnim's Tower included. Chests only — no pots or drops.
+- **In Ganon's Tower**, also the big key guessing game: a count in a box to
+  the left of the "Ganon's Tower" title — yellow while it counts the chests
+  opened, green once it stops on the chest that held the big key (that chest
+  counts). Bob's Torch counts when it's taken before the big key; a small
+  **+1 Torch** button (bottom-right, on hover — never on stream) adds it when
+  it's skipped. No box where the big key is shuffled or key drops are on.
+
+Icons are the item tracker's own images (and boss pictures), copied into an `image/` folder
+beside the page (a missing one shows its name). Text size 17 by default
+(`?size=N`). Background black by default, or white, transparent or any colour.
+The CHECKS box matches the item tracker's — a two-colour gradient with the
+number in its own colour — and all three colours are set in the ⚙ panel. Fed by two
+new WebSocket channels, `tracker:dungeon-card`, `tracker:gt-bk` and
+`tracker:progress`. Like the
+dungeon map overlay it lives in `overlays/`, so it isn't in `npm run dist:*`
+builds or patches.
+
+## Mobile view (tablet)
+
+A new page, `mobile.html`, for playing on a tablet: the items across the top (one
+row, or two even rows when the screen is too narrow — they wrap rather than
+shrink), the twelve dungeons centred along the bottom (HC EP DP ToH PoD SP SW
+TT IP MM TR GT) with the crystal / pendant counts, heart and CHECKS at the far
+left and Agahnim 1 and Go Mode at the far right (on narrow screens those two
+groups move to a line of their own above the dungeons), the Light World map on the left, the Dark World map on the right, and
+an empty box in the middle for the game. It is the tracker's own item tracker
+and map, laid out for a landscape screen and scaled to fit, so tapping works as
+clicking does and the two stay in sync; progress is kept in the tablet's
+browser. Opened by hand from wherever the tracker's files are hosted —
+nothing on the launcher changes. All twelve dungeons use the tall layout, so
+the bottom row lines up. The bottom bar's −/+ (finger-sized here) resize the maps (and with them
+the middle box), remembered on the tablet; `?gap=0.4` sets the starting size.
+The map's ⚙ Settings (map style, world state, dungeon items, GT requirement,
+seed options) is in the top-right corner of the map area. The item tracker and map only change when opened with
+`?mobile=1` (js/mobile.js).
+
+**Overlays as an OBS "Local file".** OBS serves a local file from
+`http://absolute/<path>`, which the overlays took for the tracker's own address
+— they never connected and showed a black screen. They now talk to the tracker
+on this PC unless they really are served from its `/overlay/` address; a new
+`?host=<IP>` points them at a tracker on another PC (its IP Address setting
+must then be `0.0.0.0`). Announce and the dungeon map overlay both.
 
 ## Broadcast
 
