@@ -154,6 +154,40 @@ Key Drop, which adds a door before Chain Chomps); it showed possible on one. Onc
 those keys are held it no longer wants the fire rod: that only stood in for
 the keys, which unshuffled sit in the Roller Room chests behind it.
 
+## Door Shuffle
+
+**Door Shuffle** in the launcher's Other Settings: None, Basic or Crossed.
+Chests and keys are tracked as counts — there's no room-by-room mapping.
+
+- **Basic** (rooms shuffled within each dungeon). Counts work as before. The
+  hover card drops its per-chest list (where a chest sits no longer says what
+  reaches it) and shows a Door Shuffle row instead. A dungeon you can get into
+  is yellow, and green only with everything that could matter inside: fire
+  rod, cane of somaria, flippers, hookshot, boots, bow, hammer, a glove, bombs,
+  the lamp, a sword (unless swordless), the ice rod under Boss Shuffle — plus
+  every small key and the big key when those are shuffled. Red still means
+  the way in is shut.
+- **Crossed** (rooms mixed between dungeons). As Basic, and each dungeon's
+  chest and key totals read **?** until the game shows them; then they fill
+  in from the seed. Autotracking counts with the game's own per-dungeon
+  tallies instead of room flags, which point at whichever dungeon a room
+  ended up in. Without autotracking, click the count as usual. With keys
+  shuffled a dungeon stays yellow, since Crossed never says how many it needs.
+- Saved with custom presets; every preset that doesn't mention it turns it
+  off, like the rest of Other Settings.
+- **Three door presets** from the reference tracker, all crossed doors with
+  pseudo boots: **Beginner Doors** (Standard, no dungeon items shuffled),
+  **Intermediate Doors** (Standard, small and big keys shuffled) and
+  **Crisscross** (Open, entrance shuffle, full keysanity, shop sanity — its
+  random GT requirement has no setting here, so it starts at 7).
+- **Seed Link** now sets Door Shuffle from the seed: an avianart or gwaa seed
+  says vanilla, basic or crossed (partitioned counts as crossed); alttpr.com
+  seeds have none. The "door shuffle, which the tracker does not model"
+  warning is gone — overworld shuffles still warn.
+
+The Crossed autotracking reads the same addresses the reference tracker does,
+but hasn't been run against a real door seed yet.
+
 ## Dungeon prizes
 
 **macOS: marking a prize collected also changed it.** On a Mac, Ctrl+click is
@@ -191,6 +225,22 @@ Ganon's Tower's card (and GT showed Agahnim's Tower) — the swap inverted makes
 to the two vanilla markers was being applied to the labels too. Each label now
 shows and colours its own dungeon, and a CT label is no longer red for want of
 the vanilla route to Agahnim's Tower.
+
+**Inverted 2.0: start labels no longer open the Light World.** A Link, Sanc
+or Mount label on any entrance counted as a way out into the Light World, which
+is right for Inverted 1.0 but not 2.0 — there you start in the Big Bomb Shop
+and the Dark Sanctuary. Labelling Turtle Rock's entrance "Link" lit up much of
+the Light World; in 2.0 those labels no longer do. In 2.0 the Starting
+Locations button reads **Bomb** instead of Link, since you start in the Big
+Bomb Shop.
+
+**Turtle Rock's entrance opens Dark Death Mountain.** A label or connector on
+the Turtle Rock entrance now lets you walk onto Upper Dark Death Mountain —
+Superbunny Cave (Top), Spike Cave and the rest — and drop down from there
+(Superbunny Cave (Bottom) and the lower ledges), in every world state. It only
+reached the lower ledge before, and in inverted a start label there (Link,
+Sanc, Mount) gave nothing at all. A start label on a Dark World entrance now
+counts as reaching it in inverted; on a Light World one it still doesn't.
 
 **Desert Palace Entrance (West) follows North.** The Mire + mirror route
 (South West Dark World, or the flute and Titan's Mitts, plus the mirror) lit
@@ -357,5 +407,5 @@ must then be `0.0.0.0`). Announce and the dungeon map overlay both.
   `js/maplogic.js`, `potprobe.html`, and the stray `dist/` folder.
 - `DUNGEON-LOGIC-README.md` updated for TR, IP, PoD and SW (several PoD rows were
   out of date before this release).
-- Build: `js/dngpanel.js` is `1126v`, `js/items.js` is `1126f`; `logic/ent_logic.js` now loads with
+- Build: `js/dngpanel.js` is `1127q`, `js/items.js` is `1126v`; `logic/ent_logic.js` now loads with
   `?v=1120a` so edits to it aren't served from cache.
