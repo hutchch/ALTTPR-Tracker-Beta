@@ -1,0 +1,45 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>ALTTPR Tracker — Mobile</title>
+<!--
+  Tablet view (landscape): items in two rows across the top, the twelve
+  dungeons along the bottom, the Light World map on the left and the Dark
+  World map on the right, and an empty box in the middle for the game.
+
+  Standalone: it's the tracker's own item tracker and map, so tapping works as
+  clicking does on the PC and everything is kept in this browser's storage.
+  Open it from wherever the tracker's files are hosted, e.g.
+  https://<your-site>/mobile.html  (add ?gap=0.4 to widen the middle box).
+-->
+<style>
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #000; }
+  iframe { position: absolute; border: 0; background: transparent; }
+  #items { inset: 0; width: 100%; height: 100%; }
+  #map   { left: 0; width: 100%; top: 0; height: 0; }
+</style>
+</head>
+<body>
+<iframe id="items" src="itemtracker.html?mobile=1"></iframe>
+<iframe id="map" allowtransparency="true"></iframe>
+<script>
+  var gap = new URLSearchParams(location.search).get('gap');
+  document.getElementById('map').src = 'map.html?mobile=1' + (gap ? '&gap=' + encodeURIComponent(gap) : '');
+  // The item tracker reports where its empty middle band is; the map fills it.
+  addEventListener('message', function (e) {
+    // The item tracker's settings are open: the map steps aside so they can be tapped.
+    if (e.data && e.data.type === 'mobile-settings') {
+      document.getElementById('map').style.visibility = e.data.open ? 'hidden' : '';
+      return;
+    }
+    if (!e.data || e.data.type !== 'mobile-mid') return;
+    var m = document.getElementById('map');
+    m.style.top = e.data.top + 'px';
+    m.style.height = e.data.height + 'px';
+  });
+</script>
+</body>
+</html>
