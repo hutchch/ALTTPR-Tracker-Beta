@@ -126,7 +126,7 @@ let previousSRAM = null;
 // Bumped with every change to this file, relayed in the broadcast snapshot so
 // the map's gear menu can show which build the ITEM TRACKER is running — the
 // two windows are packaged together but reload independently.
-window.ITEMS_BUILD = '1127a';
+window.ITEMS_BUILD = '1129a';
 let _bombClearTimer = null; // debounce: only clear bombs after sustained 0 reading
 
 const items = {
@@ -3053,7 +3053,7 @@ function _broadcastItemSnapNow() {
     snap.checks = parseInt((document.getElementById('toh-check-count')||{}).textContent||'0');
     snap.deaths = parseInt((document.getElementById('toh-death-count')||{}).textContent||'0');
     snap.bonks  = parseInt((document.getElementById('toh-bonk-count') ||{}).textContent||'0');
-    snap.revivals = parseInt((document.getElementById('toh-revival-count')||{}).textContent||'0');   // broadcast Race style
+    snap.revivals = parseInt((document.getElementById('toh-revival-count')||{}).textContent||'0');   // broadcast Modern v2 style
     snap.raceMode = !!window._raceMode;
     snap.currentDungeon = window._currentDungeon || null;
     snap.currentFloor   = window._currentDungeon ? (window._currentFloor || null) : null;
@@ -3552,10 +3552,15 @@ window.dungeonCardState = function () {
     var _crossed = window.doorShuffleMode && window.doorShuffleMode() === 'crossed';
     return {
         id:         k,
-        // Crossed: room flags belong to whichever dungeon a room went to, so
-        // use the tracker's own counts (the game's tallies).
-        chests:     !_crossed ? c.opened : (k === 'ct' ? ((window.trackerItems || {}).ctItems || 0) : (d.itemCount || 0)),
-        maxChests:  !_crossed ? c.total  : (k === 'ct' ? window.ctItemMaxLabel() : (d.totalUnknown ? '?' : d.maxItems)),
+        // The tracker's own item count, the same one the dungeon box and the
+        // broadcast view show — it follows the seed's mode (keysanity adds the
+        // map, compass and keys; the boss item counts too). The room-flag chest
+        // count left those out: IP showed 7 of keysanity's 8 (Chris, Oct 2026).
+        // CT outside Crossed has no tracker count, so it keeps the chest flags.
+        chests:     k === 'ct' ? (!_crossed ? c.opened : ((window.trackerItems || {}).ctItems || 0))
+                  : d.maxItems === undefined ? c.opened : Math.min(d.itemCount || 0, Math.max(0, d.maxItems - (d.skipped || 0))),
+        maxChests:  k === 'ct' ? (!_crossed ? c.total : window.ctItemMaxLabel())
+                  : d.maxItems === undefined ? c.total : (d.totalUnknown ? '?' : Math.max(0, d.maxItems - (d.skipped || 0))),
         keys:       ti[k + 'SmallKeys'] || d.smallKeyCount || 0,
         maxKeys:    k === 'ct' ? window.ctKeyMaxLabel() : (d.keysUnknown ? '?' : (d.maxSmallKeys || 0)),
         // null = this dungeon has none (Agahnim's Tower has no map, compass or big key)

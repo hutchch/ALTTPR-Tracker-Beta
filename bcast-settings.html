@@ -572,8 +572,19 @@ html, body { margin: 0; background: #1a1a1a; height: auto; min-height: 100%; wid
         <h4>View Style</h4>
         <div class="settings-radios">
           <label><input type="radio" name="view-style" value="modern"> Modern</label>
-          <label><input type="radio" name="view-style" value="race"> Modern v2</label>
+          <label><input type="radio" name="view-style" value="v2"> Modern v2</label>
           <label><input type="radio" name="view-style" value="classic"> Classic</label>
+        </div>
+      </div>
+
+      <div class="settings-section">
+        <h4>Dungeon Card</h4>
+        <div class="settings-row">
+          <label><input type="checkbox" id="opt-dng-cycle"> In a dungeon, switch between the items and the dungeon</label>
+        </div>
+        <div class="settings-row">
+          <label>Items <input type="number" id="opt-dng-items-secs" min="1" max="120" step="1" style="width:4em"> seconds</label>
+          <label>Dungeon <input type="number" id="opt-dng-card-secs" min="1" max="120" step="1" style="width:4em"> seconds</label>
         </div>
       </div>
 
@@ -696,6 +707,13 @@ html, body { margin: 0; background: #1a1a1a; height: auto; min-height: 100%; wid
 
 
 <script src="js/bcast-settings-core.js"></script>
+<script>
+// Hide what isn't released yet (BCAST_UNRELEASED in bcast-settings-core.js).
+if (!BCAST_UNRELEASED) {
+  document.querySelector('input[name="view-style"][value="v2"]').closest('label').style.display = 'none';
+  document.getElementById('opt-dng-cycle').closest('.settings-section').style.display = 'none';
+}
+</script>
 <script>
 // Settings popout: reuses the broadcast settings UI + handlers, but has no
 // tracker to render. The view-apply functions are replaced with notify-stubs so
@@ -881,6 +899,9 @@ function openSettings() {
   document.getElementById('opt-dungeon-box').checked    = SETTINGS.dungeonBoxEnabled;
   document.querySelectorAll('input[name="view-style"]').forEach(function(r) { r.checked = (r.value === SETTINGS.viewStyle); });
   document.getElementById('opt-item-anim').checked      = SETTINGS.itemAnimEnabled;
+  document.getElementById('opt-dng-cycle').checked      = SETTINGS.dngCycleEnabled;
+  document.getElementById('opt-dng-items-secs').value   = SETTINGS.dngItemsSecs;
+  document.getElementById('opt-dng-card-secs').value    = SETTINGS.dngCardSecs;
   document.getElementById('opt-anim-label').checked     = SETTINGS.animShowLabel;
   document.getElementById('opt-map-anim').checked       = SETTINGS.mapAnimEnabled;
   document.getElementById('opt-compass-anim').checked   = SETTINGS.compassAnimEnabled;
@@ -1182,6 +1203,18 @@ function wireSettingsHandlers() {
       SETTINGS.sparkColors = SPARK_PRESETS[preset].slice();
       saveSettings();
       buildSparkSwatches();
+    });
+  });
+  // Dungeon Card: switch between the items and the dungeon while in one
+  document.getElementById('opt-dng-cycle').addEventListener('change', function(e) {
+    SETTINGS.dngCycleEnabled = e.target.checked;
+    saveSettings();
+  });
+  [['opt-dng-items-secs', 'dngItemsSecs', 10], ['opt-dng-card-secs', 'dngCardSecs', 5]].forEach(function(o) {
+    document.getElementById(o[0]).addEventListener('change', function(e) {
+      var v = Math.min(120, Math.max(1, parseInt(e.target.value, 10) || o[2]));
+      e.target.value = v; SETTINGS[o[1]] = v;
+      saveSettings();
     });
   });
   // Item Animation toggle

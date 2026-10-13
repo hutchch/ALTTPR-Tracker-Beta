@@ -26,7 +26,7 @@
 
 // Bumped with every change to this file. The map's gear menu shows it, so a
 // stale packaged build can be spotted without guessing (Chris, Sep 2026).
-window.DNGPANEL_BUILD = '1128a';
+window.DNGPANEL_BUILD = '1130a';
 
 // Door Shuffle (launcher → Other Settings): 'none', 'basic' or 'crossed'.
 // Basic shuffles the rooms inside each dungeon; Crossed mixes rooms between
@@ -1264,8 +1264,10 @@ var LOC_RULES = {
     // two keys and nothing else (Chris, Sep 2026).
     'Trench 1 Pot Key':    function (c) { return spKeys(c, 2, 0, 'available'); },
     'Hookshot Pot Key':    function (c) { return hook(c, 3, 0, 2); },
-    'West Chest':          function (c) { return spKeys(c, 4, 0, ham(c), 3); },
-    'Big Key Chest':       function (c) { return spKeys(c, 4, 0, ham(c), 3); },
+    // Key Drop: possible from four keys, available only with all six (review
+    // sheet, Oct 2026); three is still out of logic.
+    'West Chest':          function (c) { return spKeys(c, 6, 4, ham(c), 3); },
+    'Big Key Chest':       function (c) { return spKeys(c, 6, 4, ham(c), 3); },
     'Trench 2 Pot Key':    function (c) { return spKeys(c, 3, 0, ham(c), 2); },
     'Big Chest':           function (c) {
       if (!c.bigkey) return 'unavail';
@@ -1415,9 +1417,9 @@ var LOC_RULES = {
       // (six effective); three with the red cane, or two and the bomb jump, are
       // the possible readings (five and four effective).
       else if (c.keys >= 6) res = 'available';
-      else if (c.keys >= 4) res = 'possible';
-      // Three keys, the hammer and the red cane (Chris, Oct 2026).
-      else if (c.keys >= 3 && c.item('somaria')) res = 'possible';
+      // Possible from two keys (review sheet, Oct 2026; was four, or three
+      // with the red cane).
+      else if (c.keys >= 2) res = 'possible';
       else res = 'unavail';
       if (!c.bigkey) res = (res === 'unavail') ? 'unavail' : 'possible';
       else if (c.bossOk === false) return 'bossitem';
@@ -1520,38 +1522,42 @@ var LOC_RULES = {
     "Bob's Torch":                    function (c) { return c.item('boots') ? 'available' : 'unavail'; },
     'Conveyor Cross Pot Key':         gtFree,
     'Tile Room':                      function (c) { return c.item('somaria') ? 'available' : 'unavail'; },
-    'DMs Room - Bottom Left':         gtKD(gtMain, 1, 2),
-    'DMs Room - Bottom Right':        gtKD(gtMain, 1, 2),
-    'DMs Room - Top Left':            gtKD(gtMain, 1, 2),
-    'DMs Room - Top Right':           gtKD(gtMain, 1, 2),
-    'Map Chest':                      gtKD(gtMapChest, 1, 2),
-    'Double Switch Pot Key':          gtKD(gtFree, 1, 2),
-    'Firesnake Room':                 gtKD(gtMain, 2, 3),
-    'Randomizer Room - Bottom Left':  gtKD(gtMain, 3, 4),
-    'Randomizer Room - Bottom Right': gtKD(gtMain, 3, 4),
-    'Randomizer Room - Top Left':     gtKD(gtMain, 3, 4),
-    'Randomizer Room - Top Right':    gtKD(gtMain, 3, 4),
-    "Bob's Chest":                    gtKD(gtMain, 3, 4),
-    'Big Key Chest':                  gtKD(gtMain, 3, 4),
-    'Big Key Room - Left':            gtKD(gtMain, 3, 4),
-    'Big Key Room - Right':           gtKD(gtMain, 3, 4),
+    // Key thresholds from the review sheet (Oct 2026), keys spent the worst
+    // way: gtKeyed(rule, KD possible, KD available, KS possible, KS available).
+    // Available needs 3 of GT's 4 keys in Key Sanity, 6 of 8 in Key Drop.
+    'DMs Room - Bottom Left':         gtKeyed(gtMain, 1, 6, 1, 3),
+    'DMs Room - Bottom Right':        gtKeyed(gtMain, 1, 6, 1, 3),
+    'DMs Room - Top Left':            gtKeyed(gtMain, 1, 6, 1, 3),
+    'DMs Room - Top Right':           gtKeyed(gtMain, 1, 6, 1, 3),
+    'Map Chest':                      gtKeyed(gtMapChest, 1, 6, 1, 3),
+    'Double Switch Pot Key':          gtKD(gtFree, 1, 6),
+    'Firesnake Room':                 gtKeyed(gtMain, 2, 6, 1, 3),
+    'Randomizer Room - Bottom Left':  gtKeyed(gtMain, 3, 6, 2, 3),
+    'Randomizer Room - Bottom Right': gtKeyed(gtMain, 3, 6, 2, 3),
+    'Randomizer Room - Top Left':     gtKeyed(gtMain, 3, 6, 2, 3),
+    'Randomizer Room - Top Right':    gtKeyed(gtMain, 3, 6, 2, 3),
+    "Bob's Chest":                    gtKeyed(gtMain, 3, 6, 2, 3),
+    'Big Key Chest':                  gtKeyed(gtMain, 3, 6, 2, 3),
+    'Big Key Room - Left':            gtKeyed(gtMain, 3, 6, 2, 3),
+    'Big Key Room - Right':           gtKeyed(gtMain, 3, 6, 2, 3),
     // Compass room side: cane of somaria + fire rod.
-    'Compass Room - Bottom Left':     gtKD(gtCompass, 1, 5),
-    'Compass Room - Bottom Right':    gtKD(gtCompass, 1, 5),
-    'Compass Room - Top Left':        gtKD(gtCompass, 1, 5),
-    'Compass Room - Top Right':       gtKD(gtCompass, 1, 5),
-    'Conveyor Star Pits Pot Key':     gtKD(gtCompass, 1, 5),
+    'Compass Room - Bottom Left':     gtKeyed(gtCompass, 1, 6, 2, 3),
+    'Compass Room - Bottom Right':    gtKeyed(gtCompass, 1, 6, 2, 3),
+    'Compass Room - Top Left':        gtKeyed(gtCompass, 1, 6, 2, 3),
+    'Compass Room - Top Right':       gtKeyed(gtCompass, 1, 6, 2, 3),
+    'Conveyor Star Pits Pot Key':     gtKD(gtCompass, 1, 6),
     // Past the big key door.
-    'Big Chest':                      gtKD(gtBigKey, 2, 5),
+    'Big Chest':                      gtKeyed(gtBigKey, 2, 6, 2, 3),
     'Mini Helmasaur Room - Left':     gtKD(gtClimb, 0, 6),
     'Mini Helmasaur Room - Right':    gtKD(gtClimb, 0, 6),
     'Mini Helmasaur Key Drop':        gtKD(gtClimb, 0, 6),
     // Possible from one key; available one short of all of them (Chris, Oct 2026).
     'Pre-Moldorm Chest':              gtKeyed(gtClimb, 1, 7, 1, 3),
-    // Possible from two keys; available only with every key.
+    // Available only with every key; possible from two (Key Drop) or one (Key
+    // Sanity, review sheet Oct 2026).
     'Validation Chest':               gtKeyed(function (c) {
       return (gtClimb(c) === 'available' && c.item('hookshot')) ? 'available' : 'unavail';
-    }, 2, 8, 2, 4)
+    }, 2, 8, 1, 4)
   }
 };
 

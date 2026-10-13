@@ -213,11 +213,33 @@ html[data-bg="transparent"] .bbg-bar * {
   transition: background 0.15s, color 0.15s;
 }
 .bgo-btn.on      { background: #2ecc71; color: #000; }
-/* ── Race view style (Chris, Oct 2026): the race overlay's layout, filled in
+/* ── Dungeon card (Chris, Oct 2026): while Link is in a dungeon, the dungeon
+   row (the last row) swaps with this card every few seconds (Broadcast
+   Settings → Dungeon Card); the items stay. The announce overlay's card on
+   one line, placed over the row and sized to it (placeDngCard). */
+#dng-card { position: fixed; display: none; flex-direction: column; align-items: center; justify-content: center;
+  gap: .15em; font-family: Arial, sans-serif; color: #fff; white-space: nowrap; pointer-events: none; }
+body.dng-phase #dng-card { display: flex; }
+/* !important and every child: Modern's key rows set visibility: visible inline, which a hidden parent can't override */
+body.dng-phase .dng-area, body.dng-phase .dng-area * { visibility: hidden !important; }
+#dng-card .dc-name, #dng-card .dc-row { display: flex; align-items: center; gap: .7em; }   /* name + prize; then the rest */
+#dng-card .dc-name { font-size: 1.1em; font-weight: bold; gap: .4em; }
+#dng-card .dc-floor { font-size: .5em; color: #aaa; margin-left: -.2em; align-self: flex-end; margin-bottom: .2em; }
+#dng-card .dc-name img { width: 1.2em; height: 1.2em; }
+#dng-card .dc-i { display: flex; align-items: center; gap: .25em; font-weight: bold; }
+#dng-card img { width: 1.5em; height: 1.5em; object-fit: contain; image-rendering: pixelated; display: block; }
+#dng-card .dc-i.dim img { opacity: .6; }
+#dng-card .full { color: #2ecc71; }
+#dng-card .dc-boss { display: flex; align-items: center; gap: .3em; font-size: .7em; color: #bbb;
+  border: 2px solid #444; border-radius: .4em; padding: .15em .6em; }
+#dng-card .dc-boss.beaten { color: #2ecc71; border-color: #2ecc71; }
+#dng-card .dc-boss img { width: 1.4em; height: 1.4em; }
+/* ── Modern v2 view style (Chris, Oct 2026): the race overlay's layout, filled in
    live — a prize row on top (Agahnim, stat boxes, prize counts, GO), the two
    item rows, then the dungeons with prize, map/compass/big key, keys, chests. */
 .rv { --cell: 44px; font-family: Arial, sans-serif; display: flex; flex-direction: column; gap: 6px; width: calc(var(--cell) * 15); }
 .rv-row { display: grid; grid-template-columns: repeat(15, 1fr); }
+.rv-prizes + .rv-row { margin-top: calc(var(--cell) * .5); }   /* space under the top row (Chris, Oct 2026) */
 .rv-item { position: relative; aspect-ratio: 1; }
 .rv-item img { width: 100%; height: 100%; object-fit: contain; image-rendering: pixelated; display: block; }
 .rv-item.off img { opacity: .28; }
@@ -255,10 +277,12 @@ html[data-bg="transparent"] .bbg-bar * {
 .rv-d.prize-only  { border-color: var(--complete-color, #4dff88); }
 .rv-d .rv-lbl { font-size: calc(var(--cell) * .3); font-weight: bold; color: #ccc; }
 .rv-d img { image-rendering: pixelated; object-fit: contain; display: block; }
-.rv-d .rv-pz { width: 50%; aspect-ratio: 1; }
-.rv-d .rv-di { display: flex; gap: 0; width: 100%; justify-content: center; }
-.rv-d .rv-di img { width: 33.3%; aspect-ratio: 1; }
-.rv-d .rv-di img.off { opacity: .28; }
+.rv-d .rv-pb { display: flex; width: 100%; justify-content: center; }   /* prize + big key */
+.rv-d .rv-pb img { width: 45%; aspect-ratio: 1; }
+.rv-d .rv-di { display: flex; gap: 0; width: 100%; justify-content: center; align-items: center; }
+.rv-d .rv-di > img { width: 28%; aspect-ratio: 1; }
+.rv-d .rv-di .rv-cnt img { width: calc(var(--cell) * .24); height: calc(var(--cell) * .24); }
+.rv-d .rv-pb img.off, .rv-d .rv-di img.off { opacity: .28; }
 .rv-d .rv-cnt { font-size: calc(var(--cell) * var(--cntf, .42)); font-weight: bold; line-height: 1.15; white-space: nowrap; color: #eee; }
 .rv-d .rv-cnt img { display: inline; width: calc(var(--cell) * .3); height: calc(var(--cell) * .3); vertical-align: -12%; margin-right: 1px; }
 .rv-d .rv-cnt.full { color: #2ecc71; }
@@ -582,6 +606,7 @@ html[data-bg="transparent"] .bbg-bar * {
   <button class="bsettings-btn" id="item-sounds-btn" onclick="openItemSounds()">♪ Item Sounds</button>
 </div>
 
+<div id="dng-card"></div>
 <canvas id="gomode-spark-canvas"></canvas>
 
 <!-- Item animation overlay -->
@@ -1094,7 +1119,7 @@ function buildRows() {
   var container = document.querySelector('.broadcast-container');
   // Strip any rows already in the container — needed for live view-style swap
   container.querySelectorAll('.bcast-row, .rv').forEach(function(r) { r.remove(); });
-  if (SETTINGS.viewStyle === 'race') { buildRaceView(container); return; }
+  if (SETTINGS.viewStyle === 'v2') { buildV2View(container); return; }
 
   var rowKeys = Object.keys(R).filter(function(k) { return /^row\d+$/.test(k); })
                               .sort(function(a, b) { return parseInt(a.slice(3)) - parseInt(b.slice(3)); });
@@ -1114,13 +1139,13 @@ function buildRows() {
   });
 }
 
-// ── Race view style ──────────────────────────────────────────────────────────
+// ── Modern v2 view style ─────────────────────────────────────────────────────────
 // The race overlay's layout (overlays/race.html), filled in live. Items, the
 // medallion labels, Agahnim, GO and the Items/Deaths numbers are registered in
 // slotEls under the same keys the Modern layout uses, so updateItem() and the
 // rest drive them — collect animations, sounds and Go Mode sparks included.
 // Bottles, the item dimming, the prize counts and the dungeons are drawn by
-// renderRaceView() from the last snapshot.
+// renderV2View() from the last snapshot.
 var RV_ROW1 = ['bow','boomerang','hookshot','bomb','mushroom','powder','firerod','icerod','bombos','ether','quake','moonpearl','sword','shield','tunic'];
 var RV_ROW2 = ['lamp','hammer','shovel','flute','net','book','bottles','somaria','byrna','cape','mirror','halfmagic','boots','gloves','flippers'];
 // GT left out so the ten boxes are wide enough for bigger key / chest counts (Chris, Oct 2026).
@@ -1128,7 +1153,7 @@ var RV_DUNGEONS = ['ep','dp','toh','pod','sp','sw','tt','ip','mm','tr'];
 var RV_LABEL = { ep:'EP', dp:'DP', toh:'ToH', pod:'PoD', sp:'SP', sw:'SW', tt:'TT', ip:'IP', mm:'MM', tr:'TR', gt:'GT' };
 var _rv = null, _rvPrizes = {};
 function rvImg(src, cls) { var i = document.createElement('img'); i.src = src; if (cls) i.className = cls; i.draggable = false; return i; }
-function buildRaceView(container) {
+function buildV2View(container) {
   var root = document.createElement('div'); root.className = 'rv';
   _rv = { items: {}, dngs: {} };
   [RV_ROW1, RV_ROW2].forEach(function(row) {
@@ -1189,12 +1214,16 @@ function buildRaceView(container) {
   RV_DUNGEONS.forEach(function(k) {
     var box = document.createElement('div'); box.className = 'rv-d';
     var lbl = document.createElement('div'); lbl.className = 'rv-lbl'; lbl.textContent = RV_LABEL[k]; box.appendChild(lbl);
-    var prize = rvImg(BASE + '/unknown0.png', 'rv-pz'); box.appendChild(prize);
+    // Prize and big key; compass, map and keys collected; items (Chris, Oct 2026).
+    var pb = document.createElement('div'); pb.className = 'rv-pb';
+    var prize = rvImg(BASE + '/unknown0.png'), bk = rvImg(BASE + '/bigkey1.png');
+    pb.appendChild(prize); pb.appendChild(bk); box.appendChild(pb);
     var di = document.createElement('div'); di.className = 'rv-di';
-    var map = rvImg(BASE + '/map1.png'), comp = rvImg(BASE + '/compass1.png'), bk = rvImg(BASE + '/bigkey1.png');
-    di.appendChild(map); di.appendChild(comp); di.appendChild(bk); box.appendChild(di);
+    var map = rvImg(BASE + '/map1.png'), comp = rvImg(BASE + '/compass1.png');
+    di.appendChild(comp); di.appendChild(map);
     var keys = document.createElement('div'); keys.className = 'rv-cnt';
-    keys.appendChild(rvImg(BASE + '/smallkey0.png')); var kt = document.createElement('span'); keys.appendChild(kt); box.appendChild(keys);
+    keys.appendChild(rvImg(BASE + '/smallkey0.png')); var kt = document.createElement('span'); keys.appendChild(kt); di.appendChild(keys);
+    box.appendChild(di);
     var ch = document.createElement('div'); ch.className = 'rv-cnt';
     ch.appendChild(rvImg(BASE + '/chest0.png')); var ct = document.createElement('span'); ch.appendChild(ct); box.appendChild(ch);
     // No bosses in this style — too small to read (Chris, Oct 2026). GT has no
@@ -1205,18 +1234,18 @@ function buildRaceView(container) {
   });
   root.appendChild(grid);
   container.appendChild(root);
-  renderRaceView();   // the empty state straight away, before the first snapshot
+  renderV2View();   // the empty state straight away, before the first snapshot
   refreshAllFills();
-  fitRaceView();
-  setTimeout(fitRaceView, 300);   // the app window may still be settling its size
+  fitV2View();
+  setTimeout(fitV2View, 300);   // the app window may still be settling its size
 }
-// Size the race view to the window: one item is --cell wide and everything
+// Size Modern v2 to the window: one item is --cell wide and everything
 // scales with it, so measure the widest row (the top row's boxes can run
 // wider than the 15 item columns, depending on the font) and the height, and
 // rescale until it fits both ways (Chris, Oct 2026). The −/+ buttons then
-// shrink or grow it from there: _raceScale, 100 = fits the window.
-var _raceScale = parseInt(localStorage.getItem('bcast-race-scale') || '100', 10) || 100;
-function fitRaceView() {
+// shrink or grow it from there: _v2Scale, 100 = fits the window.
+var _v2Scale = parseInt(localStorage.getItem('bcast-v2-scale') || localStorage.getItem('bcast-race-scale') || '100', 10) || 100;
+function fitV2View() {
   var root = document.querySelector('.rv'); if (!root) return;
   var bar = document.querySelector('.bbg-bar');
   var W = window.innerWidth - 16;
@@ -1230,7 +1259,7 @@ function fitRaceView() {
     if (!w || !h) return;
     cell = Math.max(12, cell * Math.min(W / w, H / h));
   }
-  cell = cell * 0.99 * _raceScale / 100;   // a hair of margin against rounding
+  cell = cell * 0.99 * _v2Scale / 100;   // a hair of margin against rounding
   root.style.setProperty('--cell', Math.floor(cell * 100) / 100 + 'px');
   if (pz) pz.style.zoom = fitTopRow(root, pz);
 }
@@ -1242,9 +1271,9 @@ function fitTopRow(root, pz) {
   var need = pz.scrollWidth, have = root.clientWidth;
   return (need > have && need > 0) ? Math.max(0.5, have / need) : 1;
 }
-window.addEventListener('resize', function () { if (SETTINGS.viewStyle === 'race') fitRaceView(); });
-function renderRaceView() {
-  if (!_rv || SETTINGS.viewStyle !== 'race') return;
+window.addEventListener('resize', function () { if (SETTINGS.viewStyle === 'v2') fitV2View(); });
+function renderV2View() {
+  if (!_rv || SETTINGS.viewStyle !== 'v2') return;
   var s = _bcastLastSnap || {};
   // Dimmed until found; the tunic's first state is the green mail you start with.
   Object.keys(_rv.items).forEach(function(k) {
@@ -1276,7 +1305,7 @@ function renderRaceView() {
     d.bk.classList.toggle('off', !s[k + 'BigKey']);
     var sk = s[k + 'SmallKeys'] || 0, mk = s[k + 'MaxSmallKeys'];
     if (mk === undefined) mk = 0;
-    d.kt.textContent = sk + '/' + mk;
+    d.kt.textContent = sk;   // just the keys collected (Chris, Oct 2026)
     d.keys.classList.toggle('full', mk !== '?' && mk > 0 && sk >= mk);
     var c = s[k + 'Chests'] || 0, m = s[k + 'MaxChests'];
     if (m === undefined) m = 0;
@@ -1625,12 +1654,13 @@ function applySnap(snap) {
 }
 
 function resetAll() {
+  if (typeof _dc !== 'undefined') { _dc.card = null; updateDngCycle(); }   // new game: no dungeon card
   abortItemAnim();
   stopGomodeSparks();
   Object.keys(state).forEach(function(k){state[k]=0;});
   maxState = {};
   _rvPrizes = {};
-  Object.keys(_bcastLastSnap).forEach(function(k){ delete _bcastLastSnap[k]; });   // race view: no stale dungeon counts
+  Object.keys(_bcastLastSnap).forEach(function(k){ delete _bcastLastSnap[k]; });   // Modern v2: no stale dungeon counts
   _animSuppressNext = true;      // next snap is the post-reset seed, not a new collect
   // Force every diff guard to "unknown" so resetAll cleanly re-writes every slot.
   _appliedItemState    = {};
@@ -1733,6 +1763,7 @@ function queueItemAnim(key, imgSrcUrl, label) {
   // pending items so we only show the most recent ones.
   if (_animQueue.length >= 3) _animQueue = _animQueue.slice(-2);
   _animQueue.push({ key: key, src: imgSrcUrl, label: label || '' });
+  if (typeof dngShowItems === 'function') dngShowItems();
   if (!_animRunning) _nextAnim();
 }
 
@@ -2361,7 +2392,8 @@ function applyAllSettings() {
     applyDungeonVisibility();
     refreshAllFills();
     if (SETTINGS.viewStyle !== prevViewStyle) { rebuildRows(); _applyBcastScale(); }
-    renderRaceView();   // Modern v2's dungeon fill follows the same settings
+    renderV2View();   // Modern v2's dungeon fill follows the same settings
+    updateDngCycle();
   } catch (e) { console.error('applyAllSettings error:', e); }
 }
 
@@ -2521,14 +2553,92 @@ function stopGomodeSparks() {
   }
 }
 
-// Race view: repaint after every snapshot and prize update. Wrapped once here
+// ── Dungeon card cycle ──────────────────────────────────────────────────────
+// While Link is in a dungeon (snap.dungeonCard, the announce overlay's card),
+// swap the view between the items and the card every N seconds, card first.
+// Off outside dungeons, or with Broadcast Settings → Dungeon Card unticked.
+var DC_NAMES = { hc: 'Hyrule Castle', ct: "Agahnim's Tower", ep: 'Eastern Palace', dp: 'Desert Palace',
+  toh: 'Tower of Hera', pod: 'Palace of Darkness', sp: 'Swamp Palace', sw: 'Skull Woods', tt: "Thieves' Town",
+  ip: 'Ice Palace', mm: 'Misery Mire', tr: 'Turtle Rock', gt: "Ganon's Tower" };
+var _dc = { card: null, floor: null, timer: null, id: null };
+function dcCount(file, n, max) {
+  var full = max !== '?' && max > 0 && n >= max;
+  return '<span class="dc-i"><img src="' + BASE + '/' + file + '.png"><span' + (full ? ' class="full"' : '') + '>' + n + '/' + max + '</span></span>';
+}
+function dcIcon(file, got) {
+  return got === null ? '' : '<span class="dc-i' + (got ? '' : ' dim') + '"><img src="' + BASE + '/' + file + '.png"></span>';
+}
+function renderDngCard() {
+  var c = _dc.card, el = document.getElementById('dng-card');
+  if (!c || !el) return;
+  var h = '<div class="dc-name">' + (DC_NAMES[c.id] || c.id.toUpperCase()) +
+          (_dc.floor ? '<span class="dc-floor">' + _dc.floor + '</span>' : '') +
+          (c.prize ? dcIcon(c.prize + (c.prizeGot ? '1' : '0'), true) : '') + '</div><div class="dc-row">';
+  h += dcCount('chest0', c.chests, c.maxChests);
+  if (c.maxKeys === '?' || c.maxKeys > 0) h += dcCount('smallkey0', c.keys, c.maxKeys);
+  h += dcIcon('map' + (c.map ? 1 : 0), c.map) + dcIcon('compass' + (c.compass ? 1 : 0), c.compass) +
+       dcIcon('bigkey' + (c.bigKey ? 1 : 0), c.bigKey);   // the grey …0 pictures when missing, as announce does
+  if (c.bossBeaten !== null && c.bossBeaten !== undefined) {
+    h += '<div class="dc-boss' + (c.bossBeaten ? ' beaten' : '') + '">' +
+         (c.bossNum !== null && c.bossNum !== undefined ? '<img src="' + BASE.replace(/items$/, 'boss') + '/boss' + c.bossNum + '.png">' : '') +
+         (c.boss || 'Boss') + (c.bossBeaten ? ' ✓' : '') + '</div>';
+  }
+  el.innerHTML = h + '</div>';
+  placeDngCard();
+}
+// The dungeon row: Modern v2's dungeon boxes, otherwise the last row with
+// anything in it (Modern: the dungeons; Classic: PoD to TR and GO).
+function dngArea() {
+  if (SETTINGS.viewStyle === 'v2') return document.querySelector('.rv-dngs');
+  var rows = [].filter.call(document.querySelectorAll('.broadcast-container .bcast-row'), function (r) { return r.children.length; });
+  return rows[rows.length - 1] || null;
+}
+// Put the card over the dungeon row and size its text to fill it.
+function placeDngCard() {
+  var el = document.getElementById('dng-card'), a = dngArea();
+  document.querySelectorAll('.dng-area').forEach(function (x) { if (x !== a) x.classList.remove('dng-area'); });
+  if (!el || !a || !document.body.classList.contains('dng-phase')) return;
+  a.classList.add('dng-area');
+  var r = a.getBoundingClientRect();
+  var f = r.height / 3.4;   // two lines: the name (1.1em, its prize 1.5em) and the icons (1.5em)
+  el.style.fontSize = f + 'px'; el.style.width = 'max-content';
+  var need = el.offsetWidth;   // the card's natural width at that size
+  if (need > r.width * 0.96) el.style.fontSize = (f * r.width * 0.96 / need) + 'px';
+  el.style.left = r.left + 'px'; el.style.top = r.top + 'px'; el.style.width = r.width + 'px'; el.style.height = r.height + 'px';
+}
+window.addEventListener('resize', placeDngCard);
+// Card first, then items/card for their own times (Broadcast Settings → Dungeon Card).
+function updateDngCycle() {
+  var on = SETTINGS.dngCycleEnabled && !!_dc.card;
+  if (!on || _dc.card.id !== _dc.id) {   // stop, or start over in a new dungeon
+    clearTimeout(_dc.timer); _dc.timer = null;
+    document.body.classList.remove('dng-phase');
+  }
+  if (!on) { _dc.id = null; return; }
+  renderDngCard();
+  if (!_dc.timer) { _dc.id = _dc.card.id; dngPhase(true); }
+}
+function dngPhase(card) {
+  clearTimeout(_dc.timer);
+  document.body.classList.toggle('dng-phase', card);
+  placeDngCard();
+  var secs = card ? SETTINGS.dngCardSecs : SETTINGS.dngItemsSecs;
+  _dc.timer = setTimeout(function () { dngPhase(!card); }, Math.max(1, secs || (card ? 5 : 10)) * 1000);
+}
+// An item animation: back to the items, with their full time (Chris, Oct 2026).
+function dngShowItems() { if (_dc.timer) dngPhase(false); }
+
+// Modern v2: repaint after every snapshot and prize update. Wrapped once here
 // so every caller of applySnap / applyPrizes is covered.
 (function () {
   var _snap = applySnap, _prizes = applyPrizes;
-  applySnap = function (s) { _snap(s); renderRaceView(); };
+  applySnap = function (s) {
+    _snap(s); renderV2View();
+    if (s && 'dungeonCard' in s) { _dc.card = s.dungeonCard || null; _dc.floor = s.currentFloor || null; updateDngCycle(); }
+  };
   applyPrizes = function (p) {
     if (p) Object.keys(p).forEach(function (k) { _rvPrizes[k] = p[k]; });
-    _prizes(p); renderRaceView();
+    _prizes(p); renderV2View();
   };
 })();
 
@@ -2538,16 +2648,16 @@ function _applyBcastScale() {
   var el = document.querySelector('.broadcast-container');
   if (!el) return;
   el.style.transformOrigin = 'top left';
-  // Modern v2 sizes itself (fitRaceView, with its own −/+ scale), so no transform here.
-  if (SETTINGS.viewStyle === 'race') { el.style.transform = ''; return; }
+  // Modern v2 sizes itself (fitV2View, with its own −/+ scale), so no transform here.
+  if (SETTINGS.viewStyle === 'v2') { el.style.transform = ''; return; }
   el.style.transform = (_bcastScale === 100) ? '' : 'scale(' + (_bcastScale / 100).toFixed(2) + ')';
 }
 function bcastSizeDown() {
-  if (SETTINGS.viewStyle === 'race') { _raceScale = Math.max(30, _raceScale - 2); localStorage.setItem('bcast-race-scale', _raceScale); fitRaceView(); return; }
+  if (SETTINGS.viewStyle === 'v2') { _v2Scale = Math.max(30, _v2Scale - 2); localStorage.setItem('bcast-v2-scale', _v2Scale); fitV2View(); return; }
   _bcastScale = Math.max(10, _bcastScale - 2); localStorage.setItem('bcast-scale', _bcastScale); _applyBcastScale();
 }
 function bcastSizeUp() {
-  if (SETTINGS.viewStyle === 'race') { _raceScale = Math.min(300, _raceScale + 2); localStorage.setItem('bcast-race-scale', _raceScale); fitRaceView(); return; }
+  if (SETTINGS.viewStyle === 'v2') { _v2Scale = Math.min(300, _v2Scale + 2); localStorage.setItem('bcast-v2-scale', _v2Scale); fitV2View(); return; }
   _bcastScale = Math.min(300, _bcastScale + 2); localStorage.setItem('bcast-scale', _bcastScale); _applyBcastScale();
 }
 
