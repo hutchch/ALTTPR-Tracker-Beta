@@ -126,7 +126,7 @@ let previousSRAM = null;
 // Bumped with every change to this file, relayed in the broadcast snapshot so
 // the map's gear menu can show which build the ITEM TRACKER is running — the
 // two windows are packaged together but reload independently.
-window.ITEMS_BUILD = '1129a';
+window.ITEMS_BUILD = '1133a';
 let _bombClearTimer = null; // debounce: only clear bombs after sustained 0 reading
 
 const items = {
@@ -2454,6 +2454,19 @@ function createTracker() {
                     const _ov0 = seedFlagOverlay(itemKey, items[itemKey].currentState);
                     if (_ov0) { img.src = _ov0.img; img.alt = _ov0.name; itemSlot.dataset.itemName = _ov0.name; }
                     itemSlot.appendChild(img);
+                    // Boomerangs: one square split on the diagonal, blue upper-left
+                    // and red lower-right, each with its own fill (Chris, Oct 2026).
+                    // The <img> above keeps the item's state for everything that
+                    // reads it, hidden; refreshItemFills paints the halves.
+                    if (itemKey === 'boomerang') {
+                        itemSlot.classList.add('boom-combo');
+                        ['blue', 'red'].forEach(function (c) {
+                            const half = document.createElement('div');
+                            half.className = 'boom-half boom-' + c;
+                            half.appendChild(document.createElement('img'));
+                            itemSlot.appendChild(half);
+                        });
+                    }
                     
                     // Add medallion label container for bombos, ether, quake
                     if (['bombos', 'ether', 'quake'].includes(itemKey)) {
@@ -2463,7 +2476,17 @@ function createTracker() {
                     }
                 }
                 
-                itemSlot.addEventListener('click', () => cycleItem(itemKey, itemSlot));
+                itemSlot.addEventListener('click', (e) => {
+                    // Boomerangs: the half you click toggles that boomerang —
+                    // blue upper-left, red lower-right (Chris, Oct 2026).
+                    if (itemKey === 'boomerang') {
+                        const r = itemSlot.getBoundingClientRect();
+                        const bit = ((e.clientX - r.left) / r.width + (e.clientY - r.top) / r.height) < 1 ? 1 : 2;
+                        updateItemState('boomerang', (items.boomerang.currentState || 0) ^ bit);
+                        return;
+                    }
+                    cycleItem(itemKey, itemSlot);
+                });
                 itemSlot.addEventListener('contextmenu', (e) => {
                     e.preventDefault();
                     if (['bombos', 'ether', 'quake'].includes(itemKey)) {

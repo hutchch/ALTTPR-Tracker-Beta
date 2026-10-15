@@ -564,6 +564,7 @@ html, body { margin: 0; background: #1a1a1a; height: auto; min-height: 100%; wid
             <label><input type="radio" name="fill-effect" value="none"> No Effects</label>
             <label><input type="radio" name="fill-effect" value="falling"> Falling</label>
             <label><input type="radio" name="fill-effect" value="starburst"> Starburst</label>
+            <label><input type="radio" name="fill-effect" value="pulse"> Pulse</label>
           </div>
         </div>
       </div>
@@ -710,7 +711,6 @@ html, body { margin: 0; background: #1a1a1a; height: auto; min-height: 100%; wid
 <script>
 // Hide what isn't released yet (BCAST_UNRELEASED in bcast-settings-core.js).
 if (!BCAST_UNRELEASED) {
-  document.querySelector('input[name="view-style"][value="v2"]').closest('label').style.display = 'none';
   document.getElementById('opt-dng-cycle').closest('.settings-section').style.display = 'none';
 }
 </script>

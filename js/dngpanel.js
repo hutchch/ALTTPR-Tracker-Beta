@@ -26,7 +26,7 @@
 
 // Bumped with every change to this file. The map's gear menu shows it, so a
 // stale packaged build can be spotted without guessing (Chris, Sep 2026).
-window.DNGPANEL_BUILD = '1130a';
+window.DNGPANEL_BUILD = '1131a';
 
 // Door Shuffle (launcher → Other Settings): 'none', 'basic' or 'crossed'.
 // Basic shuffles the rooms inside each dungeon; Crossed mixes rooms between
@@ -1116,8 +1116,10 @@ var LOC_RULES = {
       return (c.item('hookshot') && (c.item('bomb') || c.item('boots'))) ? 'ool' : 'unavail';
     },
     // Small key for the door, and a fire source for the torches behind it.
+    // The key has to be found in every mode, shuffled or not (Chris, Oct
+    // 2026): c.got, since c.keys counts unshuffled keys as already in hand.
     'Big Key Chest':  function (c) {
-      if (c.keys < 1) return 'unavail';
+      if (c.got < 1) return 'unavail';
       return (c.item('firerod') || c.item('lamp')) ? 'available' : 'unavail';
     },
     'Boss':           function (c) {
@@ -1746,6 +1748,7 @@ function ruleContext(dk, baseCls) {
   // boss, and the same for PoD, SP, MM and the rest). Key Drop shuffles keys
   // into the item pool, so that keeps the counts honest.
   var keysFree = !window.shuffleSmallKeys() && onDrops === 0;
+  var got = have;   // keys actually found, before the free credit below
   if (keysFree) have = Math.max(have, maxKeys || 0, 99);
   return {
     item:     function (n) { return !!it[n]; },
@@ -1753,6 +1756,7 @@ function ruleContext(dk, baseCls) {
     keys:     have,
     found:    have,
     held:     held || 0,      // the keys actually picked up, with no free credit
+    got:      got,            // keys found (or credited by Key Drop), with no free credit
     keysFree: keysFree,
     maxKeys:  maxKeys,
     keydrop:  onDrops > 0,

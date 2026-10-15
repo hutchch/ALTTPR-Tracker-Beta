@@ -1010,13 +1010,71 @@ html.dfill-on[data-bg="white"] .dungeon-slot.prize-obtained {
 
 /* Fill effects — applied on the transition into the filled state.
    none -> fx-edges (radial mask closes inward), falling -> fx-falling,
-   starburst -> fx-fade (uniform fade-in). */
+   starburst -> fx-fade (uniform fade-in), pulse -> fx-pulse.
+   Every effect also gets the shine (Chris, Oct 2026): a white streak layered
+   over the fill gradient, parked off to the right (position 0%) and swept to
+   the left (100%) while the effect plays. */
+.item-slot.filled.fx-falling::after, .bottle-grid.filled.fx-falling::after,
+.item-slot.filled.fx-fade::after,    .bottle-grid.filled.fx-fade::after,
+.item-slot.filled.fx-edges::after,   .bottle-grid.filled.fx-edges::after,
+.item-slot.filled.fx-pulse::after,   .bottle-grid.filled.fx-pulse::after,
+.item-slot.boom-combo.filled.fx-falling .boom-half.got::before,
+.item-slot.boom-combo.filled.fx-fade    .boom-half.got::before,
+.item-slot.boom-combo.filled.fx-edges   .boom-half.got::before,
+.item-slot.boom-combo.filled.fx-pulse   .boom-half.got::before {
+    background:
+        linear-gradient(115deg, transparent 44%, rgba(255,255,255,0.9) 50%, transparent 56%) no-repeat,
+        linear-gradient(to bottom left, var(--item-fill-color, #2ecc71), var(--item-fill-color2, #5e3d99));
+    background-size: 300% 100%, 100% 100%;   /* wide enough that the streak sits fully off the square at rest */
+    background-position: 0% 0, 0 0;
+}
 .item-slot.filled.fx-falling::after,
-.bottle-grid.filled.fx-falling::after { animation: itf-falling 0.6s ease-out; }
+.bottle-grid.filled.fx-falling::after { animation: itf-falling 0.6s ease-out, itf-shine 0.9s ease-in-out 0.2s; }
 .item-slot.filled.fx-fade::after,
-.bottle-grid.filled.fx-fade::after    { animation: itf-fade    0.9s ease-out; }
+.bottle-grid.filled.fx-fade::after    { animation: itf-burst   0.6s ease-out, itf-shine 0.9s ease-in-out 0.45s;
+    /* Starburst: the fill grows from the centre out, then the shine */
+    -webkit-mask-image: radial-gradient(circle at 50% 50%, #000 var(--itf-burst, 100%), transparent calc(var(--itf-burst, 100%) + 0.5%));
+            mask-image: radial-gradient(circle at 50% 50%, #000 var(--itf-burst, 100%), transparent calc(var(--itf-burst, 100%) + 0.5%)); }
+@property --itf-burst { syntax: '<percentage>'; initial-value: 100%; inherits: false; }
+@keyframes itf-burst {
+    from { --itf-burst: 0%;   opacity: 0.7; }
+    to   { --itf-burst: 100%; opacity: 0.7; }
+}
 .item-slot.filled.fx-edges::after,
-.bottle-grid.filled.fx-edges::after   { animation: itf-edges   1.0s ease-in;  }
+.bottle-grid.filled.fx-edges::after   { animation: itf-edges   1.0s ease-in,  itf-shine 0.9s ease-in-out 0.3s; }
+.item-slot.filled.fx-pulse::after,
+.bottle-grid.filled.fx-pulse::after   { animation: itf-pulse-fill 0.9s ease-in-out, itf-shine 0.9s ease-in-out; }
+.item-slot.boom-combo.filled.fx-falling .boom-half.got::before,
+.item-slot.boom-combo.filled.fx-fade    .boom-half.got::before,
+.item-slot.boom-combo.filled.fx-edges   .boom-half.got::before { animation: itf-fade 0.9s ease-out, itf-shine 0.9s ease-in-out; }
+.item-slot.boom-combo.filled.fx-pulse   .boom-half.got::before { animation: itf-pulse-fill 0.9s ease-in-out, itf-shine 0.9s ease-in-out; }
+@keyframes itf-shine {
+    from { background-position: 0% 0, 0 0; }
+    to   { background-position: 100% 0, 0 0; }
+}
+/* Pulse (Chris, Oct 2026): the item flashes and swells twice and its outline
+   sparkles — a white / gold glow round its edges that flickers on and off. */
+.item-slot.filled.fx-pulse > img,
+.item-slot.filled.fx-pulse .boom-half.got img,
+.bottle-grid.filled.fx-pulse img { animation: itf-pulse 1.0s ease-in-out; }
+@keyframes itf-pulse {
+    0%   { transform: scale(1);    filter: brightness(1)   drop-shadow(0 0 0   rgba(255,255,255,0))  drop-shadow(0 0 0   rgba(255,215,90,0)); }
+    12%  { transform: scale(1.15); filter: brightness(1.5) drop-shadow(0 0 2px rgba(255,255,255,1))  drop-shadow(0 0 6px rgba(255,215,90,1)); }
+    24%  { transform: scale(1.25); filter: brightness(1.2) drop-shadow(0 0 1px rgba(255,255,255,.2)) drop-shadow(0 0 2px rgba(255,215,90,.3)); }
+    36%  { transform: scale(1.1);  filter: brightness(1.5) drop-shadow(0 0 2px rgba(255,255,255,1))  drop-shadow(0 0 7px rgba(255,215,90,1)); }
+    50%  { transform: scale(1);    filter: brightness(1.1) drop-shadow(0 0 1px rgba(255,255,255,.2)) drop-shadow(0 0 2px rgba(255,215,90,.3)); }
+    62%  { transform: scale(1.1);  filter: brightness(1.4) drop-shadow(0 0 2px rgba(255,255,255,1))  drop-shadow(0 0 6px rgba(255,215,90,1)); }
+    75%  { transform: scale(1.15); filter: brightness(1.2) drop-shadow(0 0 1px rgba(255,255,255,.2)) drop-shadow(0 0 2px rgba(255,215,90,.3)); }
+    88%  { transform: scale(1.05); filter: brightness(1.2) drop-shadow(0 0 2px rgba(255,255,255,.9)) drop-shadow(0 0 5px rgba(255,215,90,.8)); }
+    100% { transform: scale(1);    filter: brightness(1)   drop-shadow(0 0 0   rgba(255,255,255,0))  drop-shadow(0 0 0   rgba(255,215,90,0)); }
+}
+@keyframes itf-pulse-fill {
+    0%   { opacity: 0; }
+    25%  { opacity: 1; }
+    50%  { opacity: 0.45; }
+    75%  { opacity: 0.95; }
+    100% { opacity: 0.7; }
+}
 
 @keyframes itf-falling {
     from { transform: translateY(-100%); opacity: 0.7; }
@@ -1121,3 +1179,24 @@ html.dfill-on[data-bg="white"] .dungeon-slot.prize-obtained {
 }
 .its-file-btn:hover { border-color: #4dff88; color: #fff; }
 
+
+/* ── Boomerangs (Chris, Oct 2026): one square split on the diagonal, blue
+   upper-left and red lower-right, each half with its own fill triangle — the
+   broadcast view's combo squares. The slot's own <img> (the item state) is
+   hidden, and so is its whole-square fill. ── */
+.item-slot.boom-combo > img { display: none; }
+.item-slot.boom-combo::after { display: none; }
+.boom-half { position: absolute; inset: 4px; display: flex; pointer-events: none; }
+.boom-half.boom-blue { align-items: flex-start; justify-content: flex-start; }
+.boom-half.boom-red  { align-items: flex-end;   justify-content: flex-end; }
+.boom-half img { width: auto; height: 25px; object-fit: contain; position: relative; z-index: 2; }
+/* Same size and place as the broadcast view's (a 40px square there too). */
+.boom-half.boom-blue { padding: 2px 0 0 5px; }
+.boom-half.boom-red  { padding: 0 3px 0 0; }
+.boom-half::before {
+    content: ''; position: absolute; inset: 0; border-radius: 6px; opacity: 0; z-index: 1;
+    background: linear-gradient(to bottom left, var(--item-fill-color, #2ecc71), var(--item-fill-color2, #5e3d99));
+}
+.boom-half.boom-blue::before { clip-path: polygon(0% 0%, 97% 0%, 0% 97%); }
+.boom-half.boom-red::before  { clip-path: polygon(100% 3%, 100% 100%, 3% 100%); }
+.item-slot.boom-combo.filled .boom-half.got::before { opacity: 0.7; }

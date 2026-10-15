@@ -193,6 +193,23 @@ html[data-bg="transparent"] .bbg-bar * {
   pointer-events: none;
   border-radius: 3px;
 }
+/* Each half spans the whole square, so the fill triangles meet along the
+   diagonal with only a thin line between them, as in Modern v2 (Chris, Oct
+   2026); the pictures sit in their corners. */
+.bslot-combo .bcombo-img:first-child,
+.bslot-combo .bcombo-img:last-child { top: 0; left: 0; right: auto; bottom: auto; width: 100%; height: 100%; }
+.bslot-combo .bcombo-img:first-child { align-items: flex-start; justify-content: flex-start; padding: 3px; box-sizing: border-box; }
+.bslot-combo .bcombo-img:last-child  { align-items: flex-end;   justify-content: flex-end;   padding: 3px; box-sizing: border-box; }
+/* Room around each picture, off the diagonal. Height-led, so the tall boomerang
+   pictures (16×32) keep their shape instead of being squashed square. */
+.bslot-combo .bcombo-img img { width: auto; height: 19px; max-width: 19px; object-fit: contain; }
+/* The boomerangs, bigger and in toward the middle of each half (Chris, Oct
+   2026): their ">" points stay on their own side of the diagonal. */
+.bslot-combo.boom .bcombo-img img { height: 25px; max-width: 25px; }
+.bslot-combo.boom .bcombo-img:first-child { padding: 2px 0 0 5px; }
+.bslot-combo.boom .bcombo-img:last-child  { padding: 0 3px 0 0; }   /* red in its corner, a little in from the edge */
+.bslot-combo .bcombo-img:first-child::before { clip-path: polygon(0% 0%, 97% 0%, 0% 97%); }
+.bslot-combo .bcombo-img:last-child::before  { clip-path: polygon(100% 3%, 100% 100%, 3% 100%); }
 /* Upper-left triangle: top-left → top-right → bottom-left */
 .bcombo-img:first-child::before  { clip-path: polygon(0% 0%, 100% 0%, 0% 100%); }
 /* Lower-right triangle: top-right → bottom-right → bottom-left */
@@ -237,9 +254,26 @@ body.dng-phase .dng-area, body.dng-phase .dng-area * { visibility: hidden !impor
 /* ── Modern v2 view style (Chris, Oct 2026): the race overlay's layout, filled in
    live — a prize row on top (Agahnim, stat boxes, prize counts, GO), the two
    item rows, then the dungeons with prize, map/compass/big key, keys, chests. */
-.rv { --cell: 44px; font-family: Arial, sans-serif; display: flex; flex-direction: column; gap: 6px; width: calc(var(--cell) * 15); }
-.rv-row { display: grid; grid-template-columns: repeat(15, 1fr); }
-.rv-prizes + .rv-row { margin-top: calc(var(--cell) * .5); }   /* space under the top row (Chris, Oct 2026) */
+.rv { --cell: 44px; font-family: Arial, sans-serif; display: flex; flex-direction: column; gap: 6px; width: calc(var(--cell) * 14); }
+.rv-row { display: grid; grid-template-columns: repeat(14, 1fr); }
+/* The shovel / mushroom square: Classic's combo layout (.bcombo-img), in cells. */
+/* Each half spans the whole square, so the two fill triangles meet along the
+   diagonal with only a thin line between them (Chris, Oct 2026); the pictures
+   sit in their corners. */
+.rv .rv-combo .bcombo-img { top: 0; left: 0; right: auto; bottom: auto; width: 100%; height: 100%; }
+.rv .rv-combo .bcombo-img:first-child { align-items: flex-start; justify-content: flex-start; }
+.rv .rv-combo .bcombo-img:last-child  { align-items: flex-end;   justify-content: flex-end; }
+.rv .rv-combo .bcombo-img { padding: 5%; box-sizing: border-box; }
+.rv .rv-combo .bcombo-img img { width: 46%; height: 46%; }
+/* The boomerangs: the Modern / Classic sizing (25px tall in a 40px square,
+   blue 5px in from the left, red 3px in from the right), in proportion. */
+.rv .rv-combo.boom .bcombo-img img { width: auto; height: 62.5%; object-fit: contain; }
+.rv .rv-combo.boom .bcombo-img:first-child { padding: 5% 0 0 12.5%; }
+.rv .rv-combo.boom .bcombo-img:last-child  { padding: 0 7.5% 0 0; }
+.rv .rv-combo .bcombo-img:first-child::before { clip-path: polygon(0% 0%, 97% 0%, 0% 97%); }
+.rv .rv-combo .bcombo-img:last-child::before  { clip-path: polygon(100% 3%, 100% 100%, 3% 100%); }
+.rv .bcombo-img.off img { opacity: .28; }
+.rv-prizes + .rv-row { margin-top: calc(var(--cell) * .15); }   /* a little space under the top row (Chris, Oct 2026) */
 .rv-item { position: relative; aspect-ratio: 1; }
 .rv-item img { width: 100%; height: 100%; object-fit: contain; image-rendering: pixelated; display: block; }
 .rv-item.off img { opacity: .28; }
@@ -277,15 +311,19 @@ body.dng-phase .dng-area, body.dng-phase .dng-area * { visibility: hidden !impor
 .rv-d.prize-only  { border-color: var(--complete-color, #4dff88); }
 .rv-d .rv-lbl { font-size: calc(var(--cell) * .3); font-weight: bold; color: #ccc; }
 .rv-d img { image-rendering: pixelated; object-fit: contain; display: block; }
-.rv-d .rv-pb { display: flex; width: 100%; justify-content: center; }   /* prize + big key */
-.rv-d .rv-pb img { width: 45%; aspect-ratio: 1; }
-.rv-d .rv-di { display: flex; gap: 0; width: 100%; justify-content: center; align-items: center; }
-.rv-d .rv-di > img { width: 28%; aspect-ratio: 1; }
-.rv-d .rv-di .rv-cnt img { width: calc(var(--cell) * .24); height: calc(var(--cell) * .24); }
-.rv-d .rv-pb img.off, .rv-d .rv-di img.off { opacity: .28; }
-.rv-d .rv-cnt { font-size: calc(var(--cell) * var(--cntf, .42)); font-weight: bold; line-height: 1.15; white-space: nowrap; color: #eee; }
+.rv-d .rv-pz { width: 45%; aspect-ratio: 1; }
+.rv-d .rv-di { display: flex; gap: 0; width: 100%; justify-content: center; }
+.rv-d .rv-di img { width: 31%; aspect-ratio: 1; }
+.rv-d .rv-di img.off { opacity: .28; }
+.rv-d .rv-cnt { font-size: calc(var(--cell) * var(--cntf, .38)); font-weight: bold; line-height: 1.15; white-space: nowrap; color: #eee; }
 .rv-d .rv-cnt img { display: inline; width: calc(var(--cell) * .3); height: calc(var(--cell) * .3); vertical-align: -12%; margin-right: 1px; }
 .rv-d .rv-cnt.full { color: #2ecc71; }
+/* Keys smaller, the item count bigger (Chris, Oct 2026); its icon is smaller
+   and the digits a touch tighter so "15/15" still fits the box. */
+.rv-d .rv-keys { font-size: calc(var(--cell) * .3); }
+.rv-d .rv-keys img { width: calc(var(--cell) * .24); height: calc(var(--cell) * .24); }
+.rv-d .rv-chests { font-size: calc(var(--cell) * .46); letter-spacing: -.04em; }
+.rv-d .rv-chests img { width: calc(var(--cell) * .26); height: calc(var(--cell) * .26); }
 .bgo-btn.feeling { background: #eee600; color: #000; }
 
 /* Right-column: agahnim / gomode / stats — wider so they line up vertically */
@@ -406,27 +444,35 @@ body.dng-phase .dng-area, body.dng-phase .dng-area * { visibility: hidden !impor
   justify-content: center; gap: 2px;
 }
 
-/* Prize + big key row (under the label) */
+/* The prize, on its own under the label — larger, as in Modern v2 */
 .bdng-top img {
-  width: 12px; height: 12px;
+  width: 17px; height: 17px;
   image-rendering: pixelated;
 }
 
-/* Map + compass row */
+/* Map + compass + big key row */
 .bdng-icons img {
   width: 12px; height: 12px;
   image-rendering: pixelated;
 }
 
-/* Small keys / chests rows */
+
+/* Small keys / chests rows — bigger and bold, as in Modern v2 (Chris, Oct
+   2026); sized so "15/15" still fits the 46px slot. */
+.bdng-row { gap: 1px; }
 .bdng-row img {
   width: 10px; height: 10px;
   image-rendering: pixelated;
 }
 .bdng-row span {
-  font-family: Arial, sans-serif; font-size: 8px; color: #ccc;
-  line-height: 1;
+  font-family: Arial, sans-serif; font-size: 12px; font-weight: bold; color: #eee;
+  line-height: 1.05; letter-spacing: -0.3px;
 }
+/* Keys smaller, the item count bigger (Chris, Oct 2026). */
+.bdng-keys-row img { width: 8px; height: 8px; }
+.bdng-row .bdng-keys { font-size: 10px; }
+.bdng-chests-row img { width: 9px; height: 9px; }
+.bdng-row .bdng-chests { font-size: 14px; letter-spacing: -0.6px; }
 .bdng-row .bdng-keys.full   { color: #2ecc71; }
 .bdng-row .bdng-chests.full { color: #2ecc71; }
 
@@ -482,7 +528,7 @@ body.dng-phase .dng-area, body.dng-phase .dng-area * { visibility: hidden !impor
   display: none;
 }
 #item-anim-img {
-  width: 40px; height: 40px;
+  width: 40px; height: 40px; object-fit: contain;   /* tall pictures (the boomerangs) keep their shape */
   image-rendering: pixelated; image-rendering: crisp-edges;
   transform-origin: center center;
   position: relative; z-index: 2;
@@ -590,6 +636,80 @@ body.dng-phase .dng-area, body.dng-phase .dng-area * { visibility: hidden !impor
   padding: 2px 6px; cursor: pointer; outline: none;
 }
 
+
+/* ── Fill effects, as the item tracker has them (Chris, Oct 2026) ──
+   Every effect gets a shine: a white streak layered over the fill gradient,
+   parked off to the right (position 0%) and swept to the left while the effect
+   plays. Starburst fills from the centre out; Pulse flashes the fill, swells
+   the item twice and makes its outline sparkle. Shows even with the item
+   animation turned off. */
+.bslot.filled.fx-falling::before,
+.bslot-bottles.filled.fx-falling::before,
+.bright-slot.bslot-icon.filled.fx-falling::before,
+.bcombo-img.filled.fx-falling::before,
+.bslot.filled.fx-fade::before,
+.bslot-bottles.filled.fx-fade::before,
+.bright-slot.bslot-icon.filled.fx-fade::before,
+.bcombo-img.filled.fx-fade::before,
+.bslot.filled.fx-edges::before,
+.bslot-bottles.filled.fx-edges::before,
+.bright-slot.bslot-icon.filled.fx-edges::before,
+.bcombo-img.filled.fx-edges::before,
+.bslot.filled.fx-pulse::before,
+.bslot-bottles.filled.fx-pulse::before,
+.bright-slot.bslot-icon.filled.fx-pulse::before,
+.bcombo-img.filled.fx-pulse::before {
+  background:
+    linear-gradient(115deg, transparent 44%, rgba(255,255,255,0.9) 50%, transparent 56%) no-repeat,
+    linear-gradient(to bottom left, var(--item-fill-color, #2ecc71), var(--item-fill-color2, #b675ff));
+  background-size: 300% 100%, 100% 100%;   /* the streak sits fully off the square at rest */
+  background-position: 0% 0, 0 0;
+}
+.bslot.filled.fx-falling::before,
+.bslot-bottles.filled.fx-falling::before,
+.bright-slot.bslot-icon.filled.fx-falling::before,
+.bcombo-img.filled.fx-falling::before { animation: fx-falling 0.6s ease-out, fx-shine 0.9s ease-in-out 0.2s; }
+.bslot.filled.fx-fade::before,
+.bslot-bottles.filled.fx-fade::before,
+.bright-slot.bslot-icon.filled.fx-fade::before,
+.bcombo-img.filled.fx-fade::before { animation: fx-burst 0.6s ease-out, fx-shine 0.9s ease-in-out 0.45s;
+  -webkit-mask-image: radial-gradient(circle at 50% 50%, #000 var(--burst-reveal, 100%), transparent calc(var(--burst-reveal, 100%) + 0.5%));
+          mask-image: radial-gradient(circle at 50% 50%, #000 var(--burst-reveal, 100%), transparent calc(var(--burst-reveal, 100%) + 0.5%)); }
+.bslot.filled.fx-edges::before,
+.bslot-bottles.filled.fx-edges::before,
+.bright-slot.bslot-icon.filled.fx-edges::before,
+.bcombo-img.filled.fx-edges::before { animation: fx-edges 1.0s ease-in, fx-shine 0.9s ease-in-out 0.3s; }
+.bslot.filled.fx-pulse::before,
+.bslot-bottles.filled.fx-pulse::before,
+.bright-slot.bslot-icon.filled.fx-pulse::before,
+.bcombo-img.filled.fx-pulse::before { animation: fx-pulse-fill 0.9s ease-in-out, fx-shine 0.9s ease-in-out; }
+.bslot.filled.fx-pulse > img,
+.bright-slot.bslot-icon.filled.fx-pulse img,
+.bslot-bottles.filled.fx-pulse img,
+.bcombo-img.filled.fx-pulse img { animation: fx-pulse 1.0s ease-in-out; }
+@property --burst-reveal { syntax: '<percentage>'; initial-value: 100%; inherits: false; }
+@keyframes fx-burst {
+  from { --burst-reveal: 0%;   opacity: 0.7; }
+  to   { --burst-reveal: 100%; opacity: 0.7; }
+}
+@keyframes fx-shine {
+  from { background-position: 0% 0, 0 0; }
+  to   { background-position: 100% 0, 0 0; }
+}
+@keyframes fx-pulse-fill {
+  0% { opacity: 0; } 25% { opacity: 1; } 50% { opacity: 0.45; } 75% { opacity: 0.95; } 100% { opacity: 0.7; }
+}
+@keyframes fx-pulse {
+  0%   { transform: scale(1);    filter: brightness(1)   drop-shadow(0 0 0   rgba(255,255,255,0))  drop-shadow(0 0 0   rgba(255,215,90,0)); }
+  12%  { transform: scale(1.15); filter: brightness(1.5) drop-shadow(0 0 2px rgba(255,255,255,1))  drop-shadow(0 0 6px rgba(255,215,90,1)); }
+  24%  { transform: scale(1.25); filter: brightness(1.2) drop-shadow(0 0 1px rgba(255,255,255,.2)) drop-shadow(0 0 2px rgba(255,215,90,.3)); }
+  36%  { transform: scale(1.1);  filter: brightness(1.5) drop-shadow(0 0 2px rgba(255,255,255,1))  drop-shadow(0 0 7px rgba(255,215,90,1)); }
+  50%  { transform: scale(1);    filter: brightness(1.1) drop-shadow(0 0 1px rgba(255,255,255,.2)) drop-shadow(0 0 2px rgba(255,215,90,.3)); }
+  62%  { transform: scale(1.1);  filter: brightness(1.4) drop-shadow(0 0 2px rgba(255,255,255,1))  drop-shadow(0 0 6px rgba(255,215,90,1)); }
+  75%  { transform: scale(1.15); filter: brightness(1.2) drop-shadow(0 0 1px rgba(255,255,255,.2)) drop-shadow(0 0 2px rgba(255,215,90,.3)); }
+  88%  { transform: scale(1.05); filter: brightness(1.2) drop-shadow(0 0 2px rgba(255,255,255,.9)) drop-shadow(0 0 5px rgba(255,215,90,.8)); }
+  100% { transform: scale(1);    filter: brightness(1)   drop-shadow(0 0 0   rgba(255,255,255,0))  drop-shadow(0 0 0   rgba(255,215,90,0)); }
+}
 </style>
 </head>
 <body>
@@ -650,8 +770,8 @@ function applyDungeonVisibility() {
     d.map.style.display     = SETTINGS.showMap     ? '' : 'none';
     d.compass.style.display = SETTINGS.showCompass ? '' : 'none';
     d.bigkey.style.display  = SETTINGS.showBigKey  ? '' : 'none';
-    // Hide the icons row entirely if both map AND compass are hidden
-    d.iconsRow.style.display = (SETTINGS.showMap || SETTINGS.showCompass) ? '' : 'none';
+    // Hide the icons row entirely if map, compass AND big key are all hidden
+    d.iconsRow.style.display = (SETTINGS.showMap || SETTINGS.showCompass || SETTINGS.showBigKey) ? '' : 'none';
     d.chestRow.style.display = SETTINGS.showChests ? '' : 'none';
     applyKeyRowDisplay(d);
   });
@@ -892,6 +1012,35 @@ var COMBO_SLOTS = {
   fluteshovel: { keys: ['flute','shovel'] },
 };
 
+// Boomerangs (Chris, Oct 2026): one square split on the diagonal, blue upper-
+// left and red lower-right (boomerang1 / boomerang2, boomerang0 greyed when not
+// found), each half with its own fill. The item keeps a hidden <img> in
+// slotEls, so updateItem's animation, sound and state handling are unchanged;
+// paintBoom() draws the halves from state.boomerang (bit 1 blue, bit 2 red).
+var _boom = null;
+function buildBoomCombo(cls) {
+  var wrap = document.createElement('div'); wrap.className = cls;
+  _boom = {};
+  ['blue', 'red'].forEach(function(c) {
+    var cell = document.createElement('div'); cell.className = 'bcombo-img';
+    var i = document.createElement('img'); i.src = BASE + '/boomerang0.png'; i.draggable = false;
+    cell.appendChild(i); wrap.appendChild(cell);
+    _boom[c] = { cell: cell, img: i };
+  });
+  slotEls['boomerang'] = document.createElement('img');   // hidden state holder
+  paintBoom();
+  return wrap;
+}
+function paintBoom() {
+  if (!_boom) return;
+  var v = state.boomerang || 0;
+  [['blue', 1, 'boomerang1'], ['red', 2, 'boomerang2']].forEach(function(h) {
+    var got = !!(v & h[1]), want = BASE + '/' + (got ? h[2] : 'boomerang0') + '.png';
+    if (_boom[h[0]].img.getAttribute('src') !== want) _boom[h[0]].img.src = want;
+    applyFill('boomerang', _boom[h[0]].cell, isFilledFor('boomerang', got ? 1 : 0));
+  });
+}
+
 var slotEls = {};   // key -> img element (for items)
 var slotContainers = {}; // key -> the .bslot/.bslot-bottles wrapper that gets .filled
 var dngEls  = {};
@@ -1021,17 +1170,17 @@ function buildDungeonSlot(key) {
   var top = document.createElement('div'); top.className = 'bdng-top';
   var prizeImg  = document.createElement('img'); prizeImg.className  = 'bdng-prize';      prizeImg.src  = BASE+'/crystal0.png';
   var bigkeyImg = document.createElement('img'); bigkeyImg.className = 'bdng-bigkey-top'; bigkeyImg.src = BASE+'/bigkey0.png';
-  top.appendChild(prizeImg); top.appendChild(bigkeyImg);
+  // The prize on its own, then map / compass / big key, then the key and chest
+  // counts on lines of their own — Modern v2's original boxes (Chris, Oct 2026).
+  top.appendChild(prizeImg);
   slot.appendChild(top);
 
-  // Map / compass, centered
   var icons = document.createElement('div'); icons.className = 'bdng-icons';
   var mapImg     = document.createElement('img'); mapImg.src     = BASE+'/map0.png';
   var compassImg = document.createElement('img'); compassImg.src = BASE+'/compass0.png';
-  icons.appendChild(mapImg); icons.appendChild(compassImg);
+  icons.appendChild(mapImg); icons.appendChild(compassImg); icons.appendChild(bigkeyImg);
   slot.appendChild(icons);
 
-  // Small keys row
   var keyRow = document.createElement('div'); keyRow.className = 'bdng-row bdng-keys-row';
   var keyIcon  = document.createElement('img'); keyIcon.src = BASE+'/smallkey0.png';
   var keyVal   = document.createElement('span'); keyVal.className = 'bdng-keys'; keyVal.textContent = '0/0';
@@ -1071,6 +1220,7 @@ function buildRows() {
       slotContainers['bottles'] = grid;
       rowEl.appendChild(grid); return;
     }
+    if (key === 'boomerang') { rowEl.appendChild(buildBoomCombo('bslot-combo boom')); return; }
     if (COMBO_SLOTS[key]) {
       var combo = COMBO_SLOTS[key];
       var wrap = document.createElement('div'); wrap.className = 'bslot-combo';
@@ -1146,8 +1296,11 @@ function buildRows() {
 // rest drive them — collect animations, sounds and Go Mode sparks included.
 // Bottles, the item dimming, the prize counts and the dungeons are drawn by
 // renderV2View() from the last snapshot.
-var RV_ROW1 = ['bow','boomerang','hookshot','bomb','mushroom','powder','firerod','icerod','bombos','ether','quake','moonpearl','sword','shield','tunic'];
-var RV_ROW2 = ['lamp','hammer','shovel','flute','net','book','bottles','somaria','byrna','cape','mirror','halfmagic','boots','gloves','flippers'];
+// Two rows of 14 (Chris, Oct 2026): the shovel and the mushroom share a square,
+// split on the diagonal with a fill per half, as Classic's combo squares.
+var RV_COMBO = { shovelmush: ['shovel', 'mushroom'] };
+var RV_ROW1 = ['bow','boomerang','hookshot','powder','firerod','icerod','bombos','ether','quake','moonpearl','flippers','sword','shield','tunic'];
+var RV_ROW2 = ['lamp','hammer','shovelmush','flute','net','book','bottles','somaria','byrna','cape','mirror','halfmagic','boots','gloves'];
 // GT left out so the ten boxes are wide enough for bigger key / chest counts (Chris, Oct 2026).
 var RV_DUNGEONS = ['ep','dp','toh','pod','sp','sw','tt','ip','mm','tr'];
 var RV_LABEL = { ep:'EP', dp:'DP', toh:'ToH', pod:'PoD', sp:'SP', sw:'SW', tt:'TT', ip:'IP', mm:'MM', tr:'TR', gt:'GT' };
@@ -1160,15 +1313,26 @@ function buildV2View(container) {
     var rowEl = document.createElement('div'); rowEl.className = 'rv-row';
     row.forEach(function(k) {
       var cell = document.createElement('div'); cell.className = 'rv-item bslot';
+      if (k === 'boomerang') { rowEl.appendChild(buildBoomCombo('rv-item rv-combo boom')); return; }
+      if (RV_COMBO[k]) {
+        // Upper-left / lower-right, each half its own fill container (.bcombo-img).
+        cell.className = 'rv-item rv-combo';
+        RV_COMBO[k].forEach(function(ck) {
+          var sub = document.createElement('div'); sub.className = 'bcombo-img';
+          var si = rvImg(imgSrc(ck, 0)); slotEls[ck] = si; sub.appendChild(si); cell.appendChild(sub);
+          slotContainers[ck] = sub;
+          _rv.items[ck] = { cell: sub, img: si };
+        });
+        rowEl.appendChild(cell); return;
+      }
       slotContainers[k] = cell;   // item fill (applyFill / refreshAllFills)
       var im;
       if (k === 'bottles') {
-        // What's in each bottle, as the Modern view shows it: four mini slots,
-        // each driven by updateItem() like any item.
-        im = document.createElement('div'); im.className = 'rv-bottles';
-        ['bottle1','bottle2','bottle3','bottle4'].forEach(function(bk) {
-          var b = rvImg(imgSrc(bk, 0)); slotEls[bk] = b; im.appendChild(b);
-        });
+        // How many bottles, as one picture (bottle0–4.png), set in
+        // renderV2View (Chris, Oct 2026). The four bottle slots stay registered
+        // (not shown) so updateItem still animates and sounds a new bottle.
+        ['bottle1','bottle2','bottle3','bottle4'].forEach(function(bk) { slotEls[bk] = rvImg(imgSrc(bk, 0)); });
+        im = rvImg(BASE + '/bottle0.png');
       } else {
         im = rvImg(imgSrc(k, 0)); slotEls[k] = im;
       }
@@ -1214,17 +1378,15 @@ function buildV2View(container) {
   RV_DUNGEONS.forEach(function(k) {
     var box = document.createElement('div'); box.className = 'rv-d';
     var lbl = document.createElement('div'); lbl.className = 'rv-lbl'; lbl.textContent = RV_LABEL[k]; box.appendChild(lbl);
-    // Prize and big key; compass, map and keys collected; items (Chris, Oct 2026).
-    var pb = document.createElement('div'); pb.className = 'rv-pb';
-    var prize = rvImg(BASE + '/unknown0.png'), bk = rvImg(BASE + '/bigkey1.png');
-    pb.appendChild(prize); pb.appendChild(bk); box.appendChild(pb);
+    // The prize; map, compass, big key; then keys and items as counts on lines
+    // of their own — the same boxes as the Modern view (Chris, Oct 2026).
+    var prize = rvImg(BASE + '/unknown0.png', 'rv-pz'); box.appendChild(prize);
     var di = document.createElement('div'); di.className = 'rv-di';
-    var map = rvImg(BASE + '/map1.png'), comp = rvImg(BASE + '/compass1.png');
-    di.appendChild(comp); di.appendChild(map);
-    var keys = document.createElement('div'); keys.className = 'rv-cnt';
-    keys.appendChild(rvImg(BASE + '/smallkey0.png')); var kt = document.createElement('span'); keys.appendChild(kt); di.appendChild(keys);
-    box.appendChild(di);
-    var ch = document.createElement('div'); ch.className = 'rv-cnt';
+    var map = rvImg(BASE + '/map1.png'), comp = rvImg(BASE + '/compass1.png'), bk = rvImg(BASE + '/bigkey1.png');
+    di.appendChild(map); di.appendChild(comp); di.appendChild(bk); box.appendChild(di);
+    var keys = document.createElement('div'); keys.className = 'rv-cnt rv-keys';
+    keys.appendChild(rvImg(BASE + '/smallkey0.png')); var kt = document.createElement('span'); keys.appendChild(kt); box.appendChild(keys);
+    var ch = document.createElement('div'); ch.className = 'rv-cnt rv-chests';
     ch.appendChild(rvImg(BASE + '/chest0.png')); var ct = document.createElement('span'); ch.appendChild(ct); box.appendChild(ch);
     // No bosses in this style — too small to read (Chris, Oct 2026). GT has no
     // prize; its space is kept so the row lines up.
@@ -1238,18 +1400,24 @@ function buildV2View(container) {
   refreshAllFills();
   fitV2View();
   setTimeout(fitV2View, 300);   // the app window may still be settling its size
+  // and the pictures and fonts may still be loading (on the Mac the dungeons
+  // ended up under the bottom bar), so fit again once they have.
+  window.addEventListener('load', fitV2View);
+  setTimeout(fitV2View, 1000);
 }
 // Size Modern v2 to the window: one item is --cell wide and everything
 // scales with it, so measure the widest row (the top row's boxes can run
-// wider than the 15 item columns, depending on the font) and the height, and
+// wider than the 14 item columns, depending on the font) and the height, and
 // rescale until it fits both ways (Chris, Oct 2026). The −/+ buttons then
 // shrink or grow it from there: _v2Scale, 100 = fits the window.
 var _v2Scale = parseInt(localStorage.getItem('bcast-v2-scale') || localStorage.getItem('bcast-race-scale') || '100', 10) || 100;
 function fitV2View() {
   var root = document.querySelector('.rv'); if (!root) return;
   var bar = document.querySelector('.bbg-bar');
-  var W = window.innerWidth - 16;
-  var H = window.innerHeight - (bar ? bar.offsetHeight : 0) - 12;
+  var W = window.innerWidth - 2 * Math.max(8, root.getBoundingClientRect().left);   // the same margin both sides
+  // From the view's own top down to the bottom bar — not a guess at the
+  // margins, which left the dungeons under the bar on the Mac (Chris, Oct 2026).
+  var H = (bar ? bar.getBoundingClientRect().top : window.innerHeight) - root.getBoundingClientRect().top - 6;
   var pz = root.querySelector('.rv-prizes');
   var cell = 44;
   for (var i = 0; i < 5; i++) {
@@ -1259,11 +1427,11 @@ function fitV2View() {
     if (!w || !h) return;
     cell = Math.max(12, cell * Math.min(W / w, H / h));
   }
-  cell = cell * 0.99 * _v2Scale / 100;   // a hair of margin against rounding
+  cell = cell * 0.997 * _v2Scale / 100;   // a hair of margin against rounding (0.99 left a 10px gap on the right)
   root.style.setProperty('--cell', Math.floor(cell * 100) / 100 + 'px');
   if (pz) pz.style.zoom = fitTopRow(root, pz);
 }
-// The top row's boxes can come out wider than the 15 item columns (it depends
+// The top row's boxes can come out wider than the 14 item columns (it depends
 // on the font) and pushed GO past the right edge of the rows below (Chris,
 // Oct 2026). Shrink just that row until it's exactly as wide as the grid.
 function fitTopRow(root, pz) {
@@ -1279,7 +1447,10 @@ function renderV2View() {
   Object.keys(_rv.items).forEach(function(k) {
     var it = _rv.items[k];
     if (k === 'bottles') {
-      it.cell.classList.toggle('off', !['bottle1','bottle2','bottle3','bottle4'].some(function(b) { return (state[b] || 0) > 0; }));
+      var nb = ['bottle1','bottle2','bottle3','bottle4'].filter(function(b) { return (state[b] || 0) > 0; }).length;
+      var want = BASE + '/bottle' + nb + '.png';
+      if (it.img.getAttribute('src') !== want) it.img.src = want;
+      it.cell.classList.toggle('off', !nb);
       return;
     }
     it.cell.classList.toggle('off', k !== 'tunic' && !(state[k] || 0));
@@ -1305,7 +1476,7 @@ function renderV2View() {
     d.bk.classList.toggle('off', !s[k + 'BigKey']);
     var sk = s[k + 'SmallKeys'] || 0, mk = s[k + 'MaxSmallKeys'];
     if (mk === undefined) mk = 0;
-    d.kt.textContent = sk;   // just the keys collected (Chris, Oct 2026)
+    d.kt.textContent = sk + '/' + mk;
     d.keys.classList.toggle('full', mk !== '?' && mk > 0 && sk >= mk);
     var c = s[k + 'Chests'] || 0, m = s[k + 'MaxChests'];
     if (m === undefined) m = 0;
@@ -1363,14 +1534,15 @@ function applyFill(key, container, isFilled) {
   if (isFilled === was) return;
   if (isFilled) {
     // Clear existing effect classes, then re-add to retrigger animation
-    container.classList.remove('fx-falling', 'fx-fade', 'fx-edges');
+    container.classList.remove('fx-falling', 'fx-fade', 'fx-edges', 'fx-pulse');
     container.classList.add('filled');
     // 'starburst' option uses the uniform fade-in; 'none' uses the edges-in mask.
     if (SETTINGS.fillEffect === 'falling')   void container.offsetWidth, container.classList.add('fx-falling');
     if (SETTINGS.fillEffect === 'starburst') void container.offsetWidth, container.classList.add('fx-fade');
     if (SETTINGS.fillEffect === 'none')      void container.offsetWidth, container.classList.add('fx-edges');
+    if (SETTINGS.fillEffect === 'pulse')     void container.offsetWidth, container.classList.add('fx-pulse');
   } else {
-    container.classList.remove('filled', 'fx-falling', 'fx-fade', 'fx-edges');
+    container.classList.remove('filled', 'fx-falling', 'fx-fade', 'fx-edges', 'fx-pulse');
   }
 }
 
@@ -1380,6 +1552,7 @@ function refreshAllFills() {
   var R = activeRows();
   var all = [];
   Object.keys(R).filter(function(k){ return /^row\d+$/.test(k); }).forEach(function(rk){ all = all.concat(R[rk]); });
+  paintBoom();
   all.forEach(function(key) {
     if (key === 'bottles') {
       var anyBottle = ['bottle1','bottle2','bottle3','bottle4'].some(function(b){ return (state[b]||0) > 0; });
@@ -1440,7 +1613,8 @@ function updateItem(key, val) {
     if (key === 'boomerang') {
       var gotBlue = (val & 1) && !(prevApplied & 1);
       var gotRed  = (val & 2) && !(prevApplied & 2);
-      animLabel = gotRed && !gotBlue ? 'Red Boomerang' : 'Blue Boomerang';
+      var _boomRed = gotRed && !gotBlue;
+      animLabel = _boomRed ? 'Red Boomerang' : 'Blue Boomerang';
     }
     if (val >= 1 && TIERED_ITEM_NAMES[key] && TIERED_ITEM_NAMES[key][val]) {
       animLabel = TIERED_ITEM_NAMES[key][val];
@@ -1450,11 +1624,15 @@ function updateItem(key, val) {
     if (key === 'gomode') {
       animLabel = val === 2 ? 'Go Mode Feeling!' : 'Go Mode!';
     }
-    queueItemAnim(key, imgSrc(key, val), animLabel);
+    // A boomerang animates with the one just found (boomerang1 / boomerang2),
+    // as its square shows it (Chris, Oct 2026).
+    var animSrc = key === 'boomerang' ? BASE + '/' + (_boomRed ? 'boomerang2' : 'boomerang1') + '.png' : imgSrc(key, val);
+    queueItemAnim(key, animSrc, animLabel);
     // Per-item collect sound (not for bomb)
     playItemSound(key, val);
   }
 
+  if (key === 'boomerang') { paintBoom(); return; }
   // Update fill — bottles key fill on parent container; combo sub-items each have their own container
   if (key === 'bottle1' || key === 'bottle2' || key === 'bottle3' || key === 'bottle4') {
     var anyBottle = ['bottle1','bottle2','bottle3','bottle4'].some(function(b){ return (state[b]||0) > 0; });

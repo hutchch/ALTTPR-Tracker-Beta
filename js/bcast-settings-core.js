@@ -4,9 +4,9 @@
 // (bcast-settings.html) so the two never drift. Contains NO DOM / view code —
 // the view keeps its apply-* functions; the popout keeps the settings UI.
 
-// Not released yet (Chris, Oct 2026): the Modern v2 view style and the dungeon
-// card cycle. false hides both from Broadcast Settings and switches them off in
-// the view (a saved Modern v2 opens as Modern). Set to true to release them.
+// Not released yet (Chris, Oct 2026): the dungeon card cycle. false hides it
+// from Broadcast Settings and switches it off in the view. Set to true to
+// release it. (Modern v2 was released the same way, Oct 15.)
 var BCAST_UNRELEASED = false;
 
 var SETTINGS = {
@@ -17,7 +17,7 @@ var SETTINGS = {
   fillCustom:   '#00aa00',
   fillColor2:   'purple',    // green | blue | purple | custom (bottom-left of diagonal)
   fillCustom2:  '#b675ff',
-  fillEffect:   'none',      // none | falling | starburst
+  fillEffect:   'none',      // none | falling | starburst | pulse
   chestsColor:  'blue',      // blue | green | purple | yellow | custom — All chests collected tint
   chestsCustom: '#5a8eff',
   completeColor:'green',     // green | blue | purple | yellow | custom — Dungeon complete tint
@@ -158,10 +158,7 @@ function loadSettings() {
     SETTINGS.dngCycleEnabled = localStorage.getItem('alttp-broadcast-dng-cycle') !== 'false';
     SETTINGS.dngItemsSecs    = parseInt(localStorage.getItem('alttp-broadcast-dng-items-secs'), 10) || 10;
     SETTINGS.dngCardSecs     = parseInt(localStorage.getItem('alttp-broadcast-dng-card-secs'), 10)  || 5;
-    if (!BCAST_UNRELEASED) {   // in memory only, so the saved choices come back on release
-      if (SETTINGS.viewStyle === 'v2') SETTINGS.viewStyle = 'modern';
-      SETTINGS.dngCycleEnabled = false;
-    }
+    if (!BCAST_UNRELEASED) SETTINGS.dngCycleEnabled = false;   // in memory only, so the saved choice comes back on release
     SETTINGS.itemAnimEnabled    = localStorage.getItem('alttp-broadcast-item-anim') === 'true';
     SETTINGS.animShowLabel      = localStorage.getItem('alttp-broadcast-anim-label') !== 'false';
     SETTINGS.mapAnimEnabled     = localStorage.getItem('alttp-broadcast-map-anim') !== 'false';
@@ -248,9 +245,8 @@ function saveSettings() {
     localStorage.setItem('alttp-broadcast-show-chests',     SETTINGS.showChests    ? 'true' : 'false');
     localStorage.setItem('alttp-broadcast-dungeon-fill',    SETTINGS.dungeonFillEnabled ? 'true' : 'false');
     localStorage.setItem('alttp-broadcast-dungeon-box',     SETTINGS.dungeonBoxEnabled  ? 'true' : 'false');
-    // While unreleased, a saved Modern v2 / dungeon-card choice is left alone.
-    if (BCAST_UNRELEASED || SETTINGS.viewStyle !== 'modern' || localStorage.getItem('alttp-broadcast-view-style') !== 'v2')
-      localStorage.setItem('alttp-broadcast-view-style',      SETTINGS.viewStyle);
+    localStorage.setItem('alttp-broadcast-view-style',      SETTINGS.viewStyle);
+    // While unreleased, a saved dungeon-card choice is left alone.
     if (BCAST_UNRELEASED)
       localStorage.setItem('alttp-broadcast-dng-cycle',       SETTINGS.dngCycleEnabled ? 'true' : 'false');
     localStorage.setItem('alttp-broadcast-dng-items-secs',  String(SETTINGS.dngItemsSecs));
