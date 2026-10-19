@@ -462,6 +462,7 @@ body {
   z-index: 3;
   filter: drop-shadow(0 0 1px #000) drop-shadow(0 0 1px #000);
   image-rendering: pixelated;
+  object-fit: contain;   /* tall pictures (the boomerangs) keep their shape */
 }
 .dot-annotation.text {
   display: flex; align-items: center; justify-content: center;
@@ -504,7 +505,7 @@ body {
   transition: background 0.1s, border-color 0.1s;
 }
 .popup-item:hover { background: #2a3a4a; border-color: #5a8eff; }
-.popup-item img { width: 22px; height: 22px; image-rendering: pixelated; }
+.popup-item img { width: 22px; height: 22px; image-rendering: pixelated; object-fit: contain; }   /* tall pictures (boomerangs) keep their shape */
 .popup-item.text { font-size: 14px; font-weight: bold; color: #aaa; }
 
 /* ── Dungeon markers ── */
@@ -3277,7 +3278,10 @@ function dotClass(id) {
 // ── Check annotations (right-click → tag with item) ──────────────────────────
 var ANNOTATION_ITEMS = [
   { key: 'bow',       src: 'items/bow11.png',       alt: 'Bow' },
-  { key: 'boomerang', src: 'items/boomerang11.png', alt: 'Boomerang' },
+  // Both boomerangs, so the right one can be marked (Chris, Oct 2026). 'boomerang'
+  // stays the blue one's key so marks made before still show.
+  { key: 'boomerang',    src: 'items/boomerang1.png', alt: 'Blue Boomerang' },
+  { key: 'redboomerang', src: 'items/boomerang2.png', alt: 'Red Boomerang' },
   { key: 'hookshot',  src: 'items/hookshot1.png',   alt: 'Hookshot' },
   { key: 'bomb',      src: 'items/bomb10.png',      alt: 'Bombs' },
   { key: 'mushroom',  src: 'items/mushroom1.png',   alt: 'Mushroom' },

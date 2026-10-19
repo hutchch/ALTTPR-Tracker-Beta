@@ -263,8 +263,8 @@ body.dng-phase .dng-area, body.dng-phase .dng-area * { visibility: hidden !impor
 .rv .rv-combo .bcombo-img { top: 0; left: 0; right: auto; bottom: auto; width: 100%; height: 100%; }
 .rv .rv-combo .bcombo-img:first-child { align-items: flex-start; justify-content: flex-start; }
 .rv .rv-combo .bcombo-img:last-child  { align-items: flex-end;   justify-content: flex-end; }
-.rv .rv-combo .bcombo-img { padding: 5%; box-sizing: border-box; }
-.rv .rv-combo .bcombo-img img { width: 46%; height: 46%; }
+.rv .rv-combo .bcombo-img { padding: 3%; box-sizing: border-box; }
+.rv .rv-combo .bcombo-img img { width: 55%; height: 55%; }   /* a bit bigger (Chris, Oct 2026) */
 /* The boomerangs: the Modern / Classic sizing (25px tall in a 40px square,
    blue 5px in from the left, red 3px in from the right), in proportion. */
 .rv .rv-combo.boom .bcombo-img img { width: auto; height: 62.5%; object-fit: contain; }
@@ -272,11 +272,11 @@ body.dng-phase .dng-area, body.dng-phase .dng-area * { visibility: hidden !impor
 .rv .rv-combo.boom .bcombo-img:last-child  { padding: 0 7.5% 0 0; }
 .rv .rv-combo .bcombo-img:first-child::before { clip-path: polygon(0% 0%, 97% 0%, 0% 97%); }
 .rv .rv-combo .bcombo-img:last-child::before  { clip-path: polygon(100% 3%, 100% 100%, 3% 100%); }
-.rv .bcombo-img.off img { opacity: .28; }
 .rv-prizes + .rv-row { margin-top: calc(var(--cell) * .15); }   /* a little space under the top row (Chris, Oct 2026) */
 .rv-item { position: relative; aspect-ratio: 1; }
 .rv-item img { width: 100%; height: 100%; object-fit: contain; image-rendering: pixelated; display: block; }
-.rv-item.off img { opacity: .28; }
+/* Not found: the item's own greyed 0.png, as Modern shows it — no extra dimming
+   (it read darker than Modern, Chris Oct 2026). */
 /* Item fill: the cells are .bslot too, so Modern's fill (colours, effects,
    Item Fill on/off) applies as is; only the fixed 40px sizes are undone. */
 .rv .rv-item.bslot { width: auto; height: auto; }
