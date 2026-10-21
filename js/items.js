@@ -126,7 +126,7 @@ let previousSRAM = null;
 // Bumped with every change to this file, relayed in the broadcast snapshot so
 // the map's gear menu can show which build the ITEM TRACKER is running — the
 // two windows are packaged together but reload independently.
-window.ITEMS_BUILD = '1133a';
+window.ITEMS_BUILD = '1134a';
 let _bombClearTimer = null; // debounce: only clear bombs after sustained 0 reading
 
 const items = {
@@ -3027,6 +3027,17 @@ function _broadcastItemSnapNow() {
     ['hc','ct'].forEach(function (_k) {
         snap[_k+'BigKey'] = ((window.dungeons && window.dungeons[_k]) || {}).bigkeyState || 0;
     });
+    // HC's chest count for the map's dungeon card (an HC-labelled entrance's
+    // hover read 0/6 without it). Only the count — HC has no slot elsewhere.
+    (function () {
+        var d = window.dungeons && window.dungeons.hc;
+        if (!d) return;
+        var eff = Math.max(0, (d.maxItems || 0) - (d.skipped || 0));
+        snap.hcChests    = Math.min(d.itemCount || 0, eff);
+        snap.hcMaxChests = d.totalUnknown ? '?' : eff;
+        snap.hcSkipped   = d.skipped || 0;
+        snap.hcMap       = d.mapState || 0;
+    })();
     snap.romName = window.ROM_NAME || '';
     snap.romIsDoor = !!window.ROM_IS_DOOR;
     snap.gomode = items['gomode'] ? items['gomode'].currentState : 0;

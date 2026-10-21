@@ -343,6 +343,9 @@ body {
   transform: translateY(-50%);
 }
 #maps.entrances-hidden .ent-line { display: none; }
+/* HC M/W/E and DP M/W/E: the doors of one dungeon, joined inside. */
+.ent-line.ent-line-dungeon { background: #ff8c00; }
+.ent-line.ent-line-dungeon.ent-line-hc { background: #3b82f6; }   /* HC: blue */
 
 /* ── Entrance label (right-click → tag with key location code) ── */
 .ent-label {
@@ -374,6 +377,9 @@ body {
   padding: 0 2px;
 }
 .ent-label-gold { color: #ffd700; }
+/* An Item entrance with its item picked: the picture replaces the word. */
+.ent-label.ent-label-item { padding: 1px; line-height: 0; }
+.ent-label.ent-label-item img { width: 16px; height: 16px; object-fit: contain; image-rendering: pixelated; }
 
 /* ── Entrance right-click menu ── */
 #ent-popup {
@@ -808,7 +814,10 @@ body {
 <div id="annotation-popup">
   <div class="popup-header">
     <span class="popup-title" id="annotation-title">Tag check</span>
+    <span>
+    <button class="popup-clear" id="annotation-label" type="button" style="display:none" title="Change this entrance's label">Label…</button>
     <button class="popup-clear" id="annotation-clear" type="button">Clear</button>
+    </span>
   </div>
   <div class="popup-grid" id="annotation-grid"></div>
 </div>
@@ -2898,7 +2907,7 @@ var HC_ROOM_CHECKS = { 96: 1, 98: 1, 104: 1 };   // Escape Sewers, Hyrule Castle
 })();
 </script>
 <script src="js/dngpanel.js?v=1131a"></script>
-<script src="js/entrances_data.js"></script>
+<script src="js/entrances_data.js?v=1121b"></script>
 <script src="logic/ref_logic_entrances.js"></script>
 <script src="logic/ref_logic_entrances_owg.js"></script>
 <script src="logic/ref_logic_entrances_hmg.js"></script>
@@ -3335,6 +3344,29 @@ function saveAnnotations() {
   try { localStorage.setItem(ANNOTATION_STORE_KEY, JSON.stringify(checkAnnotations)); } catch(e) {}
 }
 
+// The same item picker tags an entrance labelled "Item" (Chris, Oct 2026). Its
+// id is 'ent:' + the entrance name. These persist like the labels do, unlike a
+// check's tag, and ride along in the entrance save file.
+var entItems = {};
+try { entItems = JSON.parse(localStorage.getItem('ent-items') || '{}'); } catch(e) {}
+function _isEntTag(id) { return typeof id === 'string' && id.indexOf('ent:') === 0; }
+function setTag(id, key) {
+  if (_isEntTag(id)) {
+    var n = id.slice(4);
+    if (key) entItems[n] = key; else delete entItems[n];
+    try { localStorage.setItem('ent-items', JSON.stringify(entItems)); } catch(e) {}
+    if (window._entRenderLabel) window._entRenderLabel(n);
+    return;
+  }
+  if (key) checkAnnotations[id] = key; else delete checkAnnotations[id];
+  saveAnnotations();
+}
+window._entItemMeta = function(name) { return entItems[name] ? findAnnotationItem(entItems[name]) : null; };
+window._entItemsReset = function() {
+  entItems = {};
+  try { localStorage.removeItem('ent-items'); } catch(e) {}
+};
+
 function findAnnotationItem(key) {
   for (var i = 0; i < ANNOTATION_ITEMS.length;   i++) if (ANNOTATION_ITEMS[i].key   === key) return ANNOTATION_ITEMS[i];
   for (var j = 0; j < ANNOTATION_SPECIAL.length; j++) if (ANNOTATION_SPECIAL[j].key === key) return ANNOTATION_SPECIAL[j];
@@ -3342,6 +3374,7 @@ function findAnnotationItem(key) {
 }
 
 function renderAnnotation(dotEl, checkId) {
+  if (_isEntTag(checkId)) return;   // entrances draw theirs in the label tag
   var existing = dotEl.querySelector('.dot-annotation');
   if (existing) existing.remove();
   var key = checkAnnotations[checkId];
@@ -3379,8 +3412,7 @@ function _buildAnnotationPopupGrid() {
     }
     cell.addEventListener('click', function() {
       if (_annotationActiveId == null) return;
-      checkAnnotations[_annotationActiveId] = item.key;
-      saveAnnotations();
+      setTag(_annotationActiveId, item.key);
       renderAnnotation(_annotationActiveDot, _annotationActiveId);
       closeAnnotationPopup();
     });
@@ -3392,7 +3424,16 @@ function openAnnotationPopup(dotEl, checkId, x, y) {
   if (!_annotationPopup) return;
   _annotationActiveId  = checkId;
   _annotationActiveDot = dotEl;
-  _annotationTitle.textContent = dotEl.dataset.checkName || dotEl.title || ('Check ' + checkId);
+  _annotationTitle.textContent = _isEntTag(checkId) ? checkId.slice(4)
+    : (dotEl.dataset.checkName || dotEl.title || ('Check ' + checkId));
+  var lb = document.getElementById('annotation-label');
+  if (lb) {
+    lb.style.display = _isEntTag(checkId) ? '' : 'none';
+    lb.onclick = function() {
+      closeAnnotationPopup();
+      if (window._entOpenPopup) window._entOpenPopup(checkId.slice(4), dotEl, x, y);
+    };
+  }
   _annotationPopup.classList.add('open');
   var pw = _annotationPopup.offsetWidth, ph = _annotationPopup.offsetHeight;
   var px = Math.min(x, window.innerWidth  - pw - 8);
@@ -3416,8 +3457,7 @@ function closeAnnotationPopup() {
   _buildAnnotationPopupGrid();
   _annotationClear.addEventListener('click', function() {
     if (_annotationActiveId == null) return;
-    delete checkAnnotations[_annotationActiveId];
-    saveAnnotations();
+    setTag(_annotationActiveId, null);
     renderAnnotation(_annotationActiveDot, _annotationActiveId);
     closeAnnotationPopup();
   });
@@ -4020,6 +4060,10 @@ window._applyInvertedDungeons(_inverted);
     });
     m.addEventListener('contextmenu', function(ev) {
       ev.preventDefault();
+      if ((window._entLabels || {})[e.name] === 'Item') {
+        openAnnotationPopup(m, 'ent:' + e.name, ev.clientX, ev.clientY);
+        return;
+      }
       window._entOpenPopup(e.name, m, ev.clientX, ev.clientY);
     });
 
@@ -4133,6 +4177,11 @@ window._applyInvertedDungeons(_inverted);
   var ENT_CONNS_KEY  = 'ent-connections'; // [[nameA, nameB], ...]
   var entLabels = {};
   var entNotes  = {};
+  var groupLineEls = [];   // orange lines between a dungeon's labelled doors
+  // Lost Woods Hideout, Lumberjack Tree, Checkerboard Cave, Peg Cave: the
+  // randomizer's bunny_accessible_locations among the Item caves.
+  var BUNNY_OK_CHECKS = [77, 78, 82, 83];
+  var DUNGEON_LINE_GROUPS = [['HC M', 'HC W', 'HC E'], ['DP M', 'DP W', 'DP E']];
   var entConnections = [];
   try { entLabels = JSON.parse(localStorage.getItem(ENT_LABELS_KEY) || '{}'); } catch(ex) {}
   try { entNotes  = JSON.parse(localStorage.getItem(ENT_NOTES_KEY)  || '{}'); } catch(ex) {}
@@ -5472,6 +5521,18 @@ window._applyInvertedDungeons(_inverted);
       color = bumpIt.cape ? DUNGEON_COLOR_HEX.green : DUNGEON_COLOR_HEX.red;
     }
 
+    // A bunny can't get these: on a door in the bunny world (Dark World, or the
+    // Light World in inverted) they need the Moon Pearl. Matches the entrance
+    // randomizer's bunny rules; Mimic and Spike already check this themselves.
+    // Item too (Chris, Oct 2026), except the caves whose item a bunny can still
+    // take — known only for an Item door autotrack labelled (it knows the cave).
+    var _bunnyItem = code === 'Item' && BUNNY_OK_CHECKS.indexOf(entItemChecks()[name]) === -1;
+    if ((code === 'Library' || code === 'Smith' || code === 'Bat' || code === 'Hook' || _bunnyItem) &&
+        window.trackerSettings && window.trackerSettings.entranceShuffle && !(window.trackerItems || {}).moonpearl) {
+      var _onDW = !!(window.ALL_DW_ENTRANCES && window.ALL_DW_ENTRANCES[name]);
+      if (_onDW !== !!window.trackerSettings.inverted) color = DUNGEON_COLOR_HEX.red;
+    }
+
     // Inverted, entrances shuffled: each tower door keeps its own barrier
     // whatever is labelled on it (GT, CT, anything) — crystals at Ganons
     // Tower, the Master Sword or Cape at Agahnims Tower (Chris, Oct 2026).
@@ -5635,9 +5696,12 @@ window._applyInvertedDungeons(_inverted);
     // only possible; then out of logic, visible, red. Grey once it's all done.
     var secKey = code && (window._entLabelToDungeon || {})[code];
     var sec = secKey && window.dngSection ? window.dngSection(secKey, code) : null;
-    if (sec && sec !== 'back' && window.dungeonCounts && !hasNote &&
+    // HC M/W/E all open onto the one castle, so they share the whole of HC's
+    // count and quarter fill (Chris, Oct 2026).
+    var hcDoor = secKey === 'hc';
+    if (((sec && sec !== 'back') || hcDoor) && window.dungeonCounts && !hasNote &&
         marker.classList.contains('ent-marked') && !marker.classList.contains('cleared')) {
-      var sc = window.dungeonCounts(secKey, true, false, sec);
+      var sc = window.dungeonCounts(secKey, true, false, hcDoor ? null : sec);
       var sColor = !sc ? 'rgba(70,70,70,0.85)'
         : sc.obtainable === sc.left ? DUNGEON_COLOR_HEX.green
         : sc.gettable ? DUNGEON_COLOR_HEX.yellow
@@ -5743,6 +5807,7 @@ window._applyInvertedDungeons(_inverted);
   function renderLabel(name) {
     var marker = entMarkers[name];
     if (!marker) return;
+    redrawGroupLines();
     var existing = entLabelEls[name];
     var code = entLabels[name];
     if (!code) {
@@ -5755,7 +5820,8 @@ window._applyInvertedDungeons(_inverted);
       applyMarkerColor(name);
       return;
     }
-    if (marker.classList.contains('cleared') && ENT_HIDE_LABEL_WHEN_CLEARED.indexOf(code) !== -1) {
+    var itemMeta = code === 'Item' && window._entItemMeta ? window._entItemMeta(name) : null;
+    if (!itemMeta && marker.classList.contains('cleared') && ENT_HIDE_LABEL_WHEN_CLEARED.indexOf(code) !== -1) {
       if (existing) { existing.remove(); delete entLabelEls[name]; }
       applyMarkerColor(name);
       return;
@@ -5767,7 +5833,16 @@ window._applyInvertedDungeons(_inverted);
       entLabelEls[name] = existing;
     }
     var mapText = ENT_MAP_LABEL_OVERRIDE[code];
-    if (code === 'Shop $') {
+    if (itemMeta) {
+      existing.innerHTML = '';
+      if (itemMeta.src) {
+        var itImg = document.createElement('img');
+        itImg.src = itemMeta.src; itImg.alt = itemMeta.alt;
+        existing.appendChild(itImg);
+      } else {
+        existing.textContent = itemMeta.text;
+      }
+    } else if (code === 'Shop $') {
       existing.innerHTML = '';
       var goldSpan = document.createElement('span');
       goldSpan.className = 'ent-label-gold';
@@ -5778,6 +5853,7 @@ window._applyInvertedDungeons(_inverted);
     }
     existing.classList.toggle('ent-label-emoji', !!mapText && code !== 'Bumper');
     existing.classList.toggle('ent-label-fairy', code === 'Fairy 🧚');
+    existing.classList.toggle('ent-label-item', !!itemMeta);
     existing.style.left = marker.style.left;
     existing.style.top  = marker.style.top;
 
@@ -5867,7 +5943,31 @@ window._applyInvertedDungeons(_inverted);
     });
   }
 
+  // Hyrule Castle's three doors all open onto the castle, and Desert's front
+  // three onto its first floor, so their labelled doors get an orange line —
+  // drawn only, not a connector, since the label groups already do the logic
+  // (Chris, Oct 2026).
+  function redrawGroupLines() {
+    groupLineEls.forEach(function(el) { if (el) el.remove(); });
+    groupLineEls = [];
+    DUNGEON_LINE_GROUPS.forEach(function(codes) {
+      var doors = [];
+      codes.forEach(function(c) {
+        Object.keys(entLabels).forEach(function(n) { if (entLabels[n] === c) doors.push(n); });
+      });
+      for (var i = 0; i < doors.length; i++) for (var j = i + 1; j < doors.length; j++) {
+        var el = drawConnection(doors[i], doors[j]);
+        if (el) {
+          el.classList.add('ent-line-dungeon');
+          if (codes[0] === 'HC M') el.classList.add('ent-line-hc');
+          groupLineEls.push(el);
+        }
+      }
+    });
+  }
+
   function redrawAllConnections() {
+    redrawGroupLines();
     entLineEls.forEach(function(item) { if (item.el) item.el.remove(); });
     entLineEls = [];
     entConnections.forEach(function(pair) {
@@ -5922,6 +6022,36 @@ window._applyInvertedDungeons(_inverted);
     m.classList.add('cleared');
     applyMarkerColor(ename);
     renderLabel(ename);
+  };
+
+  // Entrance autotracking (js/entautotrack.js). A label the player set by hand
+  // always wins, so this only fills an empty marker.
+  window._entAutoLabel = function(ename, code) {
+    if (!entMarkers[ename] || entLabels[ename]) return;
+    entLabels[ename] = code;
+    saveLabels();
+    renderLabel(ename);
+    refreshSyntheticConnections();
+    refreshConnectionDependentDots();
+    refreshKeyLocationMarks();
+    Object.keys(entMarkers).forEach(applyMarkerColor);
+  };
+  // Autotrack remembers which check an Item door leads to; once SRAM says the
+  // check is done, the door is cleared (Chris, Oct 2026).
+  function entItemChecks() { try { return JSON.parse(localStorage.getItem('ent-item-checks') || '{}'); } catch(ex) { return {}; } }
+  window._entLinkItemCheck = function(ename, checkId) {
+    var map = entItemChecks(); map[ename] = checkId;
+    localStorage.setItem('ent-item-checks', JSON.stringify(map));
+    if (checkState[checkId]) window.markEntranceClearedByName(ename);
+  };
+  window._entClearItemDoors = function(ids) {
+    var map = entItemChecks();
+    Object.keys(map).forEach(function(ename) {
+      if (ids.indexOf(map[ename]) !== -1 && entLabels[ename] === 'Item') window.markEntranceClearedByName(ename);
+    });
+  };
+  window._entAutoConnect = function(a, b) {
+    if (entMarkers[a] && entMarkers[b]) addConnection(a, b);
   };
 
   window.markEntranceClearedByCode = function(code) {
@@ -6368,6 +6498,8 @@ window._applyInvertedDungeons(_inverted);
 
   // ── Full reset (called from New Game) ──
   window._entResetAll = function() {
+    if (window._entItemsReset) window._entItemsReset();
+    try { localStorage.removeItem('ent-item-checks'); } catch(ex) {}
     // Clear labels
     Object.keys(entLabels).forEach(function(name) { delete entLabels[name]; });
     saveLabels();
@@ -7553,6 +7685,7 @@ window.onRoomsUpdated = function(data) {
         if (code) window.markEntranceClearedByCode(code);
       });
     }
+    if (window._entClearItemDoors) window._entClearItemDoors(newlyCleared);
     // OnlyADKD: the same for the item doors, which stand in for an interior's
     // checks rather than for a label.
     if (onlyAdkd() && typeof window.markEntranceClearedByName === 'function') {
@@ -7710,7 +7843,7 @@ try {
         window.trackerItems.spBigKey     = snap.spBigKey     !== undefined ? snap.spBigKey     : (window.trackerItems.spBigKey || 0);
         window.trackerItems.swBigKey     = snap.swBigKey     !== undefined ? snap.swBigKey     : (window.trackerItems.swBigKey || 0);
         window.trackerItems.gtBigKey     = snap.gtBigKey     !== undefined ? snap.gtBigKey     : (window.trackerItems.gtBigKey || 0);
-        ['ep','dp','toh','ct','pod','sp','sw','tt','ip','mm','tr','gt'].forEach(function(_dk) {
+        ['hc','ep','dp','toh','ct','pod','sp','sw','tt','ip','mm','tr','gt'].forEach(function(_dk) {
           _DNG_KEEP.forEach(function(_df) {
             var _dn = _dk + _df;
             if (snap[_dn] === undefined && _prevDng[_dn] !== undefined) {
@@ -7881,6 +8014,8 @@ function saveEntState() {
     cleared:     localStorage.getItem('ent-cleared')     || '{}',
     notes:       localStorage.getItem('ent-notes')       || '{}',
     checks:      localStorage.getItem('alttp-checks')    || '{}',
+    items:       localStorage.getItem('ent-items')       || '{}',
+    itemChecks:  localStorage.getItem('ent-item-checks') || '{}',
   };
   var json = JSON.stringify(state, null, 2);
   if (window.electronAPI && window.electronAPI.saveEntState) {
@@ -7922,6 +8057,8 @@ function _applyEntState(json) {
     if (state.labels)      localStorage.setItem('ent-labels',      state.labels);
     if (state.connections) localStorage.setItem('ent-connections', state.connections);
     if (state.cleared)     localStorage.setItem('ent-cleared',     state.cleared);
+    localStorage.setItem('ent-items', state.items || '{}');   // older files have none
+    localStorage.setItem('ent-item-checks', state.itemChecks || '{}');
     if (state.notes)       localStorage.setItem('ent-notes',       state.notes);
     // Not 'alttp-checks' — the reload below clears that by design. See the
     // one-shot pickup in the check-state block above.
@@ -9325,5 +9462,6 @@ if (document.readyState === 'loading') {
 })();
 </script>
 <script src="js/mobile.js?v=18"></script>
+<script src="js/entautotrack.js?v=1121a"></script>
 </body>
 </html>

@@ -68,9 +68,13 @@ var ENTRANCES = [
   {name:"Good Bee Cave", world:"lw", left:94.9, top:79.5},
   {name:"20 Rupee Cave", world:"lw", left:93.3, top:81.5},
   {name:"Tower of Hera", world:"lw", left:58.9, top:5.0},
-  {name:"Spectacle Rock Cave Peak", world:"lw", left:47.0, top:15.0},
-  {name:"Spectacle Rock Cave (Bottom)", world:"lw", left:51.7, top:16.0},
-  {name:"Spectacle Rock Cave", world:"lw", left:51.7, top:13.0},
+  // The three Spectacle Rock doors were named round the wrong way: by the
+  // randomizer's own door table the top one is the Peak, the lower right one is
+  // Spectacle Rock Cave and the lower left one is the Bottom (Chris, Oct 2026 —
+  // Entrance Autotrack labelled the neighbouring marker). Positions unchanged.
+  {name:"Spectacle Rock Cave (Bottom)", world:"lw", left:47.0, top:15.0},
+  {name:"Spectacle Rock Cave", world:"lw", left:51.7, top:16.0},
+  {name:"Spectacle Rock Cave Peak", world:"lw", left:51.7, top:13.0},
   {name:"Old Man Cave (East)", world:"lw", left:41.6, top:20.0},
   {name:"Death Mountain Return Cave (East)", world:"lw", left:40.8, top:14.0},
   {name:"Death Mountain Return Cave (West)", world:"lw", left:37.4, top:16.0},

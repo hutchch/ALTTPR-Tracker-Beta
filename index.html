@@ -69,6 +69,13 @@ input:focus, select:focus { outline: none; border-color: #4dff88; }
   border-radius: 4px; padding: 3px 10px; font-size: 11px; cursor: pointer;
 }
 .mini-launch:hover { background: #3b7cf0; }
+/* Auto Entrance, to the right of Entrance Shuffle where OnlyADKD used to be.
+   Its name runs to two lines. Not race legal: Race Mode turns it off and locks it. */
+.autotrack-group { margin-left: auto; display: inline-flex; align-items: center; gap: 6px; }
+.autotrack-text { font-size: 10px; color: #aaa; line-height: 1.1; text-align: right; white-space: nowrap; }
+.autotrack-sub { display: block; font-size: 9px; color: #d08a4a; }
+.autotrack-group.locked { opacity: .4; }
+.autotrack-group.locked .toggle-slider { cursor: not-allowed; }
 /* Toggle rows use a narrower label column than the dropdown rows above — they
    sit beside the Preset panel, so 152px would squeeze it. 96px clears the
    longest label ("Entrance Shuffle" at ~88.5px) and lines every slider up. */
@@ -669,9 +676,13 @@ input:focus, select:focus { outline: none; border-color: #4dff88; }
       <span class="toggle-slider"></span>
       </label>
       <span class="toggle-label-text" id="entranceshuffle-toggle-label">No</span>
-      <button type="button" id="onlyadkd-launch" class="mini-launch"
-              onclick="launchOnlyAdkd()"
-              title="Set every OnlyADKD option and open the Item Tracker and Map">OnlyADKD</button>
+      <span class="autotrack-group" title="Marks entrances on the map as you go through them. Not race legal: Race Mode turns it off.">
+      <span class="autotrack-text">Auto Entrance<span class="autotrack-sub">Not Race Legal</span></span>
+      <label class="toggle-switch">
+      <input type="checkbox" id="entautotrack-toggle">
+      <span class="toggle-slider"></span>
+      </label>
+      </span>
       </div>
       <div class="row toggle-row">
       <label>Boss Shuffle</label>
@@ -680,6 +691,9 @@ input:focus, select:focus { outline: none; border-color: #4dff88; }
       <span class="toggle-slider"></span>
       </label>
       <span class="toggle-label-text" id="bossshuffle-toggle-label">Yes</span>
+      <button type="button" id="onlyadkd-launch" class="mini-launch"
+              onclick="launchOnlyAdkd()"
+              title="Set every OnlyADKD option and open the Item Tracker and Map">OnlyADKD</button>
       </div>
       <div class="row toggle-row">
       <label>Enemizer</label>
@@ -842,9 +856,27 @@ function wireToggleLabel(toggleId, labelId) {
   toggle.addEventListener('change', sync);
   sync();
 }
-['entranceshuffle','bossshuffle','enemizer','universalkeys','keydropall','keydrop','enemykeydrop','swordless','pseudoboots','mirrorscroll','shopsanity','bonkshuffle','racemode'].forEach(function(name) {
+['entranceshuffle','bossshuffle','enemizer','universalkeys','keydropall','keydrop','enemykeydrop','swordless','pseudoboots','mirrorscroll','shopsanity','bonkshuffle','racemode','entautotrack'].forEach(function(name) {
   wireToggleLabel(name + '-toggle', name + '-toggle-label');
 });
+
+// Entrance Autotrack isn't race legal: Race Mode forces it off and locks it.
+function syncAutotrackLock() {
+  var rm = document.getElementById('racemode-toggle');
+  var at = document.getElementById('entautotrack-toggle');
+  if (!rm || !at) return;
+  var race = rm.checked;
+  if (race) at.checked = false;
+  at.disabled = race;
+  var g = at.closest('.autotrack-group');
+  if (g) g.classList.toggle('locked', race);
+  var l = document.getElementById('entautotrack-toggle-label');
+  if (l) l.textContent = at.checked ? 'Yes' : 'No';
+}
+(function () {
+  var rm = document.getElementById('racemode-toggle');
+  if (rm) rm.addEventListener('change', syncAutotrackLock);
+})();
 
 // ── Seed link → settings ──────────────────────────────────────────────────────
 // Reads a seed's metadata from alttpr.com and fills in the settings form. It
@@ -1353,11 +1385,12 @@ function applySeedMeta(meta) {
   }
 
   // Re-sync the Yes/No labels and persist, same as applyPresetSettings does.
-  ['entranceshuffle','bossshuffle','enemizer','universalkeys','keydropall','keydrop','enemykeydrop','swordless','pseudoboots','mirrorscroll','shopsanity','bonkshuffle','racemode'].forEach(function(name) {
+  ['entranceshuffle','bossshuffle','enemizer','universalkeys','keydropall','keydrop','enemykeydrop','swordless','pseudoboots','mirrorscroll','shopsanity','bonkshuffle','racemode','entautotrack'].forEach(function(name) {
     var t = document.getElementById(name + '-toggle');
     var l = document.getElementById(name + '-toggle-label');
     if (t && l) l.textContent = t.checked ? 'Yes' : 'No';
   });
+  syncAutotrackLock();
   // The Other Settings button shows a summary of the boxes inside its panel,
   // and that summary is driven by their `change` events — which don't fire when
   // the boxes are set from code. applyPresetSettings already calls this; a seed
@@ -1536,6 +1569,7 @@ function getSettings() {
     doorShuffle: doorShuffleValue(),
     entranceShuffle: esToggle && esToggle.checked ? 'on' : 'none',
     raceMode:   document.getElementById('racemode-toggle') && document.getElementById('racemode-toggle').checked ? 'yes' : 'no',
+    entAutotrack: document.getElementById('entautotrack-toggle') && document.getElementById('entautotrack-toggle').checked && !(document.getElementById('racemode-toggle') || {}).checked ? 'yes' : 'no',
     apiEnabled: document.getElementById('api-enabled') && document.getElementById('api-enabled').checked ? 'yes' : 'no',
     apiHost:    document.getElementById('api-host') ? (document.getElementById('api-host').value || '127.0.0.1') : '127.0.0.1',
     apiPort:    document.getElementById('api-port') ? (document.getElementById('api-port').value || '8720') : '8720',
@@ -1582,6 +1616,7 @@ function save() {
   localStorage.setItem('alttp-entrance-shuffle', s.entranceShuffle === 'none' ? 'no' : 'yes');
   localStorage.setItem('alttp-entrance-shuffle-mode', s.entranceShuffle);
   localStorage.setItem('alttp-race-mode', s.raceMode);
+  localStorage.setItem('alttp-ent-autotrack', s.entAutotrack);
   localStorage.setItem('alttp-api-enabled', s.apiEnabled);
   localStorage.setItem('alttp-api-host', s.apiHost);
   localStorage.setItem('alttp-api-port', s.apiPort);
@@ -1673,6 +1708,9 @@ function launchTimer() {
 // opened straight away.
 function launchOnlyAdkd() {
   applyPresetSettings(BUILTIN_PRESETS.onlyadkd);
+  // OnlyADKD always launches with Auto Entrance off (Chris, Oct 2026).
+  var _at = document.getElementById('entautotrack-toggle');
+  if (_at) _at.checked = false;
   save();
   try {
     localStorage.setItem('alttp-preset', 'onlyadkd');
@@ -1836,17 +1874,20 @@ window.addEventListener('DOMContentLoaded', async function() {
   var raceVal = saved.raceMode || localStorage.getItem('alttp-race-mode') || 'no';
   var racemodeToggle = document.getElementById('racemode-toggle');
   if (racemodeToggle) racemodeToggle.checked = (raceVal === 'yes');
+  var atToggle = document.getElementById('entautotrack-toggle');
+  if (atToggle) atToggle.checked = ((saved.entAutotrack || localStorage.getItem('alttp-ent-autotrack')) === 'yes');
 
   var esVal = saved.entranceShuffle || localStorage.getItem('alttp-entrance-shuffle-mode') || 'none';
   var esToggleEl = document.getElementById('entranceshuffle-toggle');
   if (esToggleEl) esToggleEl.checked = (esVal !== 'none');
 
   // Re-sync the Yes/No text labels now that toggle states were restored.
-  ['entranceshuffle','bossshuffle','enemizer','universalkeys','keydropall','keydrop','enemykeydrop','swordless','pseudoboots','mirrorscroll','shopsanity','bonkshuffle','racemode'].forEach(function(name) {
+  ['entranceshuffle','bossshuffle','enemizer','universalkeys','keydropall','keydrop','enemykeydrop','swordless','pseudoboots','mirrorscroll','shopsanity','bonkshuffle','racemode','entautotrack'].forEach(function(name) {
     var t = document.getElementById(name + '-toggle');
     var l = document.getElementById(name + '-toggle-label');
     if (t && l) l.textContent = t.checked ? 'Yes' : 'No';
   });
+  syncAutotrackLock();
 
   updateOtherSettingsSummary();
 
@@ -2819,11 +2860,12 @@ function applyPresetSettings(cfg) {
   if (dsSel) dsSel.value = cfg.doorShuffle || 'none';   // same rule: unnamed means off
 
   // Re-sync the Yes/No text labels and persist the now-applied settings.
-  ['entranceshuffle','bossshuffle','enemizer','universalkeys','keydropall','keydrop','enemykeydrop','swordless','pseudoboots','mirrorscroll','shopsanity','bonkshuffle','racemode'].forEach(function(name) {
+  ['entranceshuffle','bossshuffle','enemizer','universalkeys','keydropall','keydrop','enemykeydrop','swordless','pseudoboots','mirrorscroll','shopsanity','bonkshuffle','racemode','entautotrack'].forEach(function(name) {
     var t = document.getElementById(name + '-toggle');
     var l = document.getElementById(name + '-toggle-label');
     if (t && l) l.textContent = t.checked ? 'Yes' : 'No';
   });
+  syncAutotrackLock();
   // The Other Settings popup has its own derived state — the dimming of the two
   // key-drop halves under the master, and the summary line that reports what is
   // on without opening it. Neither redraws itself, so a preset that changes a
