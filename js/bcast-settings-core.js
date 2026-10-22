@@ -4,11 +4,6 @@
 // (bcast-settings.html) so the two never drift. Contains NO DOM / view code —
 // the view keeps its apply-* functions; the popout keeps the settings UI.
 
-// Not released yet (Chris, Oct 2026): the dungeon card cycle. false hides it
-// from Broadcast Settings and switches it off in the view. Set to true to
-// release it. (Modern v2 was released the same way, Oct 15.)
-var BCAST_UNRELEASED = false;
-
 var SETTINGS = {
   bg:           'black',
   bgImage:      '',          // data: URL of uploaded background image
@@ -30,7 +25,7 @@ var SETTINGS = {
   dungeonFillEnabled: true, // When false the chests-done/prize-done tints are suppressed
   dungeonBoxEnabled:  true, // When false the default dark slot container is hidden — flat dungeons
   viewStyle:       'modern',     // 'modern' | 'v2' | 'classic'
-  dngCycleEnabled: true,         // In a dungeon, swap between the items and a dungeon card
+  dngCycleEnabled: false,        // In a dungeon, swap between the items and a dungeon card (released Oct 2026, off by default)
   dngItemsSecs:    10,           // ...the items for this many seconds
   dngCardSecs:     5,            // ...then the dungeon card for this many
   itemAnimEnabled: false,        // When true, full-screen spin-in animation on item collect
@@ -155,10 +150,10 @@ function loadSettings() {
     SETTINGS.dungeonBoxEnabled  = localStorage.getItem('alttp-broadcast-dungeon-box')  !== 'false';
     SETTINGS.viewStyle       = localStorage.getItem('alttp-broadcast-view-style')        || SETTINGS.viewStyle;
     if (SETTINGS.viewStyle === 'race') SETTINGS.viewStyle = 'v2';   // Modern v2's old name (v1.1.21 dev builds)
-    SETTINGS.dngCycleEnabled = localStorage.getItem('alttp-broadcast-dng-cycle') !== 'false';
+    // New key on release, so a choice saved while testing doesn't carry over: off by default.
+    SETTINGS.dngCycleEnabled = localStorage.getItem('alttp-broadcast-dng-card-on') === 'true';
     SETTINGS.dngItemsSecs    = parseInt(localStorage.getItem('alttp-broadcast-dng-items-secs'), 10) || 10;
     SETTINGS.dngCardSecs     = parseInt(localStorage.getItem('alttp-broadcast-dng-card-secs'), 10)  || 5;
-    if (!BCAST_UNRELEASED) SETTINGS.dngCycleEnabled = false;   // in memory only, so the saved choice comes back on release
     SETTINGS.itemAnimEnabled    = localStorage.getItem('alttp-broadcast-item-anim') === 'true';
     SETTINGS.animShowLabel      = localStorage.getItem('alttp-broadcast-anim-label') !== 'false';
     SETTINGS.mapAnimEnabled     = localStorage.getItem('alttp-broadcast-map-anim') !== 'false';
@@ -247,8 +242,7 @@ function saveSettings() {
     localStorage.setItem('alttp-broadcast-dungeon-box',     SETTINGS.dungeonBoxEnabled  ? 'true' : 'false');
     localStorage.setItem('alttp-broadcast-view-style',      SETTINGS.viewStyle);
     // While unreleased, a saved dungeon-card choice is left alone.
-    if (BCAST_UNRELEASED)
-      localStorage.setItem('alttp-broadcast-dng-cycle',       SETTINGS.dngCycleEnabled ? 'true' : 'false');
+    localStorage.setItem('alttp-broadcast-dng-card-on',       SETTINGS.dngCycleEnabled ? 'true' : 'false');
     localStorage.setItem('alttp-broadcast-dng-items-secs',  String(SETTINGS.dngItemsSecs));
     localStorage.setItem('alttp-broadcast-dng-card-secs',   String(SETTINGS.dngCardSecs));
     localStorage.setItem('alttp-broadcast-item-anim',        SETTINGS.itemAnimEnabled    ? 'true' : 'false');

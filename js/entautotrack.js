@@ -34,13 +34,18 @@
   var HOLE_MAX         = 5;    // %: map coordinates of the hole marker
   var POLL_MS          = 100;
 
-  function enabled() {
+  // Race Mode and OnlyADKD rule it out whatever the switch says.
+  function allowed() {
     try {
-      if (localStorage.getItem('alttp-ent-autotrack') !== 'yes') return false;
       if (localStorage.getItem('alttp-race-mode') === 'yes') return false;
-      if (typeof onlyAdkd === 'function' && onlyAdkd()) return false;   // OnlyADKD has its own map
     } catch (e) { return false; }
-    return true;
+    return !(typeof onlyAdkd === 'function' && onlyAdkd());
+  }
+  function enabled() {
+    if (!allowed()) return false;
+    try {
+      return localStorage.getItem('alttp-ent-autotrack') === 'yes';
+    } catch (e) { return false; }
   }
   function entMapOn() { return !!(window.trackerSettings && window.trackerSettings.entranceShuffle); }
 
@@ -129,11 +134,13 @@
     want = 0;
     try { watch(parse(buf)); } catch (e) { console.warn('[EntAutotrack]', e); }
   }
+  var on = false;   // switched by the launcher at load, or live from the map's Map Style
   function connect() {
     clearInterval(timer); timer = null; want = 0;
+    if (!on) return;
     var host = localStorage.getItem('alttp-ws-host') || 'localhost';
     var port = localStorage.getItem('alttp-ws-port') || '23074';
-    try { ws = new WebSocket('ws://' + host + ':' + port); } catch (e) { setTimeout(connect, 3000); return; }
+    try { ws = new WebSocket('ws://' + host + ':' + port); } catch (e) { ws = null; setTimeout(connect, 3000); return; }
     ws.binaryType = 'arraybuffer';
     var attached = false;
     ws.onopen = function () { ws.send(JSON.stringify({ Opcode: 'DeviceList', Space: 'SNES' })); };
@@ -147,9 +154,15 @@
       ws.send(JSON.stringify({ Opcode: 'Name', Space: 'SNES', Operands: ['ALTTP Entrance Autotrack'] }));
       timer = setInterval(poll, POLL_MS);
     };
-    ws.onclose = function () { clearInterval(timer); timer = null; want = 0; prev = null; pending = null; setTimeout(connect, 3000); };
+    ws.onclose = function () { ws = null; clearInterval(timer); timer = null; want = 0; prev = null; pending = null; setTimeout(connect, 3000); };
+  }
+  function setEnabled(v) {
+    on = !!v;
+    if (on && !ws) connect();
+    if (!on && ws) { ws.onclose = null; try { ws.close(); } catch (e) {} ws = null; clearInterval(timer); timer = null; want = 0; prev = null; pending = null; inside = null; }
   }
 
-  window._entAutotrack = { watch: watch, parse: parse, matchDoor: matchDoor, matchHole: matchHole, DEST: DEST };
-  if (enabled()) connect();
+  window._entAutotrack = { watch: watch, parse: parse, matchDoor: matchDoor, matchHole: matchHole, DEST: DEST,
+                           setEnabled: setEnabled, isOn: function () { return on; }, allowed: allowed };
+  setEnabled(enabled());
 })();

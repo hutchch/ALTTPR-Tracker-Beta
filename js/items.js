@@ -126,7 +126,7 @@ let previousSRAM = null;
 // Bumped with every change to this file, relayed in the broadcast snapshot so
 // the map's gear menu can show which build the ITEM TRACKER is running — the
 // two windows are packaged together but reload independently.
-window.ITEMS_BUILD = '1134a';
+window.ITEMS_BUILD = '1136a';
 let _bombClearTimer = null; // debounce: only clear bombs after sustained 0 reading
 
 const items = {
@@ -3178,8 +3178,8 @@ function connectWebSocket() {
             _scheduleReconnect();
         };
 
-        ws.onclose = () => {
-            console.log('WebSocket disconnected');
+        ws.onclose = (ev) => {
+            console.log('WebSocket disconnected', ev && ev.code, ev && ev.reason);
             window._currentWorld = null; if (window.setCurrentDungeon) window.setCurrentDungeon(null);
             updateConnectionStatus('Disconnected');
             deviceAttached = false;
@@ -3242,6 +3242,10 @@ function handleWebSocketMessage(event) {
                 }
                 return;
             }
+            // Data arriving is proof of a live connection, whatever the label
+            // last said. QUsb2Snes 0.7.3x left it on "Disconnected" while
+            // reads kept coming in (Chris, Oct 2026; SNI was fine).
+            if (_connStatus !== 'Connected') updateConnectionStatus('Connected');
             // Steady-state SRAM reads.  Discriminate by length: a 1-byte
             // response is the game-mode read we issue each cycle for the
             // timer window's benefit; everything else goes to processSRAMData.
@@ -4834,7 +4838,9 @@ function ensureBottomBar() {
 // Keep alias for legacy calls
 function ensureReconnectButton() { ensureBottomBar(); }
 
+var _connStatus = null;   // last status shown, so data can correct a stale one
 function updateConnectionStatus(status) {
+    _connStatus = status;
     // Relay the SNI/autotracker connection status to the overlay WebSocket API
     // (main broadcasts it as the HoellTracker 'sni:connection-status' channel).
     // Sent before the UI-div guard so it always propagates.

@@ -709,12 +709,6 @@ html, body { margin: 0; background: #1a1a1a; height: auto; min-height: 100%; wid
 
 <script src="js/bcast-settings-core.js"></script>
 <script>
-// Hide what isn't released yet (BCAST_UNRELEASED in bcast-settings-core.js).
-if (!BCAST_UNRELEASED) {
-  document.getElementById('opt-dng-cycle').closest('.settings-section').style.display = 'none';
-}
-</script>
-<script>
 // Settings popout: reuses the broadcast settings UI + handlers, but has no
 // tracker to render. The view-apply functions are replaced with notify-stubs so
 // every change pings the live broadcast view to re-apply (see applyAllSettings).

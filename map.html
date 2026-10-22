@@ -671,6 +671,7 @@ body {
           <select id="set-mapstyle" class="tb-select">
             <option value="standard">Standard</option>
             <option value="entrance">Entrance Shuffle</option>
+            <option value="entrance-auto">Auto Entrance Shuffle – Not Race Legal</option>
           </select>
         </div>
       </div>
@@ -1171,6 +1172,9 @@ window.bunnyLW = function () {
   return !!(s.inverted2 && it.gloves >= 2 && it.flute >= 1);
 };
 
+// The flute flies only once it's activated (flute11.png, state 2), in every
+// mode (Chris, Oct 2026). Inverted 2.0's flute arrives activated, so its
+// helpers below still take any flute.
 window.fluteDW = function () {
   var s = window.trackerSettings || {}, it = window.trackerItems || {};
   return !!(s.inverted2 && it.flute >= 1);
@@ -1234,7 +1238,7 @@ function dungeonColor(key) {
   // LW access in inverted — two tiers:
   // lwDM: Death Mountain portal (glove/flute + pearl)
   // lwVillage: Village portal (hammer+glove, titans mitt, or aga+hookshot route) — general LW access
-  var lwDM      = !inverted || (it.moonpearl && it.hammer && ((it.gloves >= 1 && it.hookshot) || (it.gloves >= 2 && it.hammer)) && (it.lamp || it.flute >= 1));
+  var lwDM      = !inverted || (it.moonpearl && it.hammer && ((it.gloves >= 1 && it.hookshot) || (it.gloves >= 2 && it.hammer)) && (it.lamp || it.flute >= 2));
   var lwVillage = !inverted || window.lwViaDMReturn() || (
     it.moonpearl &&
     (it.agahnim || it.gloves >= 2 || (it.gloves >= 1 && it.hammer))
@@ -1292,7 +1296,7 @@ function dungeonColor(key) {
       // bunny, and dying inside drops bunny form, so the dungeon is genuinely
       // enterable — the book still opens it (Chris, Sep 2026).
       if (!lwAccess && !(window.bunnyLW && window.bunnyLW())) return 'red';
-      var hasAccess = inverted ? it.book : (it.book || (it.mirror && it.flute && it.gloves >= 2));
+      var hasAccess = inverted ? it.book : (it.book || (it.mirror && it.flute >= 2 && it.gloves >= 2));
       if (!hasAccess) return 'red';
       // Boots are the Torch's requirement and nothing else's, so once the Torch
       // is collected or skipped they stop holding the dungeon at yellow.
@@ -1324,7 +1328,7 @@ function dungeonColor(key) {
         // flute + hookshot + hammer
         // mirror + gloves                (out of logic without lamp/flute)
         // gloves + hookshot + hammer     (out of logic without lamp/flute)
-        var flute   = it.flute >= 1;
+        var flute   = it.flute >= 2;
         var gloves  = it.gloves >= 1;
         var mirror  = it.mirror >= 1;
         var hookham = it.hookshot && it.hammer;
@@ -1447,7 +1451,7 @@ function dungeonColor(key) {
       // But still need DW east access route
       if (!inverted && !it.moonpearl) return 'red';
       var dwEastPOD = inverted
-        ? (it.hammer || (it.flute >= 1 && lwVillage) || window.fluteDW() || it.flippers || (it.mirror && lwVillage) || (it.agahnim && !it.moonpearl && it.mirror))
+        ? (it.hammer || (it.flute >= 2) || window.fluteDW() || it.flippers || (it.mirror && lwVillage) || (it.agahnim && !it.moonpearl && it.mirror))
         : (it.moonpearl && (it.agahnim || (it.gloves >= 2 && it.flippers) || (it.hammer && it.gloves >= 1)));
       if (!dwEastPOD) {
         if (inverted && it.bomb) return 'purple'; // inverted: bomb-jump to East DW = out of logic
@@ -1672,7 +1676,7 @@ function dungeonColor(key) {
       // Inverted: DW is home world — no moonpearl or titans mitt needed
       // Access via flute (needs LW village access) or mirror + LW village access
       if (inverted) {
-        var mmAccess = (it.flute >= 1 && lwVillage) || window.fluteDW() || (it.mirror && lwVillage) || (it.agahnim && !it.moonpearl && it.mirror);
+        var mmAccess = (it.flute >= 2) || window.fluteDW() || (it.mirror && lwVillage) || (it.agahnim && !it.moonpearl && it.mirror);
         if (!mmAccess) return 'red';
       } else {
         // Non-inverted: MM sits in the south-west Dark World. Reaching it means
@@ -1680,7 +1684,7 @@ function dungeonColor(key) {
         // Mitts — and the Moon Pearl is mandatory, since a bunny cannot lift
         // rocks or enter the dungeon. Missing pearl = no access at all.
         if (!it.moonpearl) return 'red';
-        if (!it.flute || it.gloves < 2) return 'red';
+        if (!(it.flute >= 2) || it.gloves < 2) return 'red';
       }
       if (!it.boots && !it.hookshot) return 'red';
       var hasAllMeds = it.bombos && it.ether && it.quake;
@@ -1720,7 +1724,7 @@ function dungeonColor(key) {
       // Must reach the EAST Death Mountain summit to get to the right/east Dark
       // Death Mountain where TR sits: climb DM (gloves to lift rocks, or flute
       // warp) AND cross to the east side (hookshot, or mirror + hammer).
-      if (!inverted && !((it.gloves >= 1 || it.flute >= 1) && (it.hookshot || (it.mirror && it.hammer)))) return 'red';
+      if (!inverted && !((it.gloves >= 1 || it.flute >= 2) && (it.hookshot || (it.mirror && it.hammer)))) return 'red';
       // Must traverse east DW Death Mountain: hammer + titans mitts
       if (!inverted && (!it.hammer || it.gloves < 2)) return 'red';
       if (!inverted) {
@@ -1742,7 +1746,7 @@ function dungeonColor(key) {
       }
       if (inverted) {
         // Check backdoor access
-        var dwDMAccess = (it.gloves >= 1 && window.gloveClimbsDM()) || (it.flute >= 1 && lwVillage) || window.fluteToDDM();
+        var dwDMAccess = (it.gloves >= 1 && window.gloveClimbsDM()) || (it.flute >= 2) || window.fluteToDDM();
         // The back door is a mirror trip from the Light World DM ledge — Mimic
         // Cave, or Spiral Cave, which 2.0 bridges to Mimic (Chris, Sep 2026).
         // Crossing to that ledge is the hookshot, titan's mitts + hammer, or —
@@ -1751,7 +1755,7 @@ function dungeonColor(key) {
                        (window.trackerSettings.inverted2 && it.mirror && it.hammer);
         var backEntrance = dwDMAccess && it.moonpearl && trEastLW && it.mirror;
         // Front entrance
-        var frontEntrance = ((it.gloves >= 1 && window.gloveClimbsDM()) || (it.flute >= 1 && lwVillage) || window.fluteToDDM()) && it.somaria;
+        var frontEntrance = ((it.gloves >= 1 && window.gloveClimbsDM()) || (it.flute >= 2) || window.fluteToDDM()) && it.somaria;
         if (!frontEntrance && !backEntrance) return 'red';
         // The front door needs the cane, the medallion and a sword. Without all
         // three you can still mirror in from Mimic or Spiral to TR's back door,
@@ -1791,7 +1795,7 @@ function dungeonColor(key) {
           : (function() { try { return JSON.parse(localStorage.getItem('ent-connections') || '[]'); } catch(e) { return []; } })();
         var _gtHCFound = isEntShuffleGT &&
           _gtConns.some(function(c) { return _gtHCNames[c[0]] || _gtHCNames[c[1]]; });
-        var _gtDWDM = (it.gloves >= 1 && window.gloveClimbsDM()) || (it.flute >= 1 && lwVillage) || window.fluteToDDM();
+        var _gtDWDM = (it.gloves >= 1 && window.gloveClimbsDM()) || (it.flute >= 2) || window.fluteToDDM();
         // A found entrance labelled CT is the way in (entrance shuffle hides
         // the vanilla marker, so this branch only ever answers for the label).
         if (!isEntShuffleGT && !_gtHCFound && !_gtDWDM) return 'red';
@@ -1916,7 +1920,7 @@ function checkLogic(it) {
   var hammer   = it.hammer >= 1;
   var mirror   = it.mirror >= 1;
   var lamp     = it.lamp >= 1;
-  var flute    = it.flute >= 1;
+  var flute    = it.flute >= 2;
   var firerod  = it.firerod >= 1;
   var somaria  = it.somaria >= 1;
   var byrna    = it.byrna >= 1;
@@ -1956,7 +1960,7 @@ function checkLogic(it) {
     ? true
     : pearl && (titan || (glove && hammer) || (aga && hookshot && (hammer || glove || flippers)));
   var dwEast  = inv
-    ? (hammer || (flute && lwAccess) || window.fluteDW() || flippers || (mirror && lwAccess) || (superBunny && mirror))
+    ? (hammer || flute || window.fluteDW() || flippers || (mirror && lwAccess) || (superBunny && mirror))
     : pearl && (aga || (hammer && glove) || (titan && flippers));
   var dwSouth = inv
     ? true
@@ -2070,13 +2074,13 @@ function checkLogic(it) {
     9:   function() { return bomb ? 'green' : 'red'; },
     10:  function() {
            var _inv=window.trackerSettings&&window.trackerSettings.inverted;
-           if (_inv) return ((flute && lwAccess) || window.fluteDW() || (mirror && lwAccess) || (superBunny && mirror)) ? 'green' : 'red';
+           if (_inv) return (flute || window.fluteDW() || (mirror && lwAccess) || (superBunny && mirror)) ? 'green' : 'red';
            return (pearl&&flute&&titan) ? 'green' : 'red';
          },
     11:  function() {
            var _inv=window.trackerSettings&&window.trackerSettings.inverted;
            if (_inv) {
-             var dwDM = (glove && window.gloveClimbsDM()) || (flute && lwAccess) || window.fluteToDDM();
+             var dwDM = (glove && window.gloveClimbsDM()) || flute || window.fluteToDDM();
              if (!dwDM) return 'red';
              return DMlight ? 'green' : 'purple';
            }
@@ -2140,7 +2144,7 @@ function checkLogic(it) {
     21:  function() {
            var _inv=window.trackerSettings&&window.trackerSettings.inverted;
            if (_inv) {
-             var dwDM = (glove && window.gloveClimbsDM()) || (flute && lwAccess) || window.fluteToDDM();
+             var dwDM = (glove && window.gloveClimbsDM()) || flute || window.fluteToDDM();
              if (!dwDM) return 'red';
              if (hookshot || boots) return DMlight?'green':'purple';
              return 'red';
@@ -2152,7 +2156,7 @@ function checkLogic(it) {
     22:  function() {
            var _inv=window.trackerSettings&&window.trackerSettings.inverted;
            if (_inv) {
-             var dwDM = (glove && window.gloveClimbsDM()) || (flute && lwAccess) || window.fluteToDDM();
+             var dwDM = (glove && window.gloveClimbsDM()) || flute || window.fluteToDDM();
              if (!dwDM || !hookshot) return 'red';
              return DMlight?'green':'purple';
            }
@@ -2263,7 +2267,7 @@ function checkLogic(it) {
            // Inverted non-shuffle (and inverted ent-shuffle without East DW connector):
            // glove is always required; additionally need East DW access.
            if (_inv) {
-             var _east73 = flippers || (mirror && lwAccess) || (superBunny && mirror) || hammer || (flute && lwAccess) || window.fluteDW();
+             var _east73 = flippers || (mirror && lwAccess) || (superBunny && mirror) || hammer || flute || window.fluteDW();
              if (glove && _east73) return 'green';
              if (glove && bomb) return 'purple'; // inverted: bomb-jump to East DW = out of logic (glove still lifts the rock)
              return 'red';
@@ -2325,7 +2329,7 @@ function checkLogic(it) {
            if (_inv) {
              // Inverted: the flute only lights DM once it can be activated, which
              // in 1.0 means a Light World trip. 2.0 hands it over activated.
-             var DMlightInv = lamp || (flute && lwAccess) || window.fluteToDDM();
+             var DMlightInv = lamp || flute || window.fluteToDDM();
              return DMlightInv ? 'green' : 'purple';
            }
            if (!climbDM) return 'red';
@@ -2805,7 +2809,7 @@ window.checkColor = function(id) {
                           ? (it.flute >= 1 || (lwVillageAccess && glove))
                           : glove;
       var mirror2 = it.mirror >= 1;
-      var lwDMTopLeft     = pearl && hammer && ((glove && hook) || (titan && hammer)) && (it.lamp || it.flute >= 1);
+      var lwDMTopLeft     = pearl && hammer && ((glove && hook) || (titan && hammer)) && (it.lamp || it.flute >= 2);
       var lwDMEastAccess  = pearl && glove && (titan || hook);
       var lwVillageAccess = window.lwViaDMReturn() || (pearl && (aga || titan || (glove && hammer)));
     if (id === 109 || id === 110) { /* fall through to checkLogic — DW DM access not gated here */ }
@@ -2865,7 +2869,7 @@ window.checkColor = function(id) {
         // Inverted entrance shuffle: Old Man (75) — glove doesn't reach DM when
         // the cave entrance is shuffled. Flute (bird warp) or a LWDM connector does.
         } else if (_isEntShuffle && id === 75 &&
-                   (it.flute >= 1 ||
+                   (it.flute >= 2 ||
                     _synthRegs87.indexOf('Lower West Death Mountain') !== -1 ||
                     _synthRegs87.indexOf('Inverted Lower West Death Mountain') !== -1)) {
           return it.lamp >= 1 ? 'green' : 'yellow';
@@ -5206,7 +5210,7 @@ window._applyInvertedDungeons(_inverted);
         var _dpNIt = window.trackerItems || {};
         var _dpNSynth = window._entSyntheticFoundRegions || [];
         var _swDWReach = _dpNSynth.indexOf('South West Dark World') !== -1 ||
-                         (_dpNIt.flute >= 1 && _dpNIt.gloves >= 2); // Flute+Titan → Mire
+                         (_dpNIt.flute >= 2 && _dpNIt.gloves >= 2); // Flute+Titan → Mire
         if (_swDWReach && _dpNIt.mirror) return false; // Mire+mirror always grants DP North
       }
       if ((dpWestDirect || dpNorthDirect)) {
@@ -6808,7 +6812,7 @@ window.refreshMapLogic = function() {
     var aga2    = it.agahnim >= 1;
     var hook2   = it.hookshot >= 1;
     var flip2   = it.flippers >= 1;
-    var lwDMok      = pearl2 && hammer2 && ((glove2 && hook2) || (titan2 && hammer2)) && (it.lamp || it.flute >= 1);  // Top-left LW DM needs DMlight
+    var lwDMok      = pearl2 && hammer2 && ((glove2 && hook2) || (titan2 && hammer2)) && (it.lamp || it.flute >= 2);  // Top-left LW DM needs DMlight
     var lwVillageOk = window.lwViaDMReturn() || (pearl2 && (aga2 || titan2 || (glove2 && hammer2)));
     var lwOk = lwVillageOk;  // general LW access
     // Bottle Merchant (65) is LW — needs portal access or SuperBunny (aga+no pearl)
@@ -6860,7 +6864,7 @@ window.refreshMapLogic = function() {
       var _ctHCFound = _isEntShuffleCT &&
         _ctConns2.some(function(c) { return _ctHCNames2[c[0]] || _ctHCNames2[c[1]]; });
       var dwDMAccess = _ctHCFound || (glove2 && window.gloveClimbsDM()) || window.fluteToDDM() ||
-                       (window.trackerItems && window.trackerItems.flute >= 1 && lwVillageOk);
+                       (window.trackerItems && window.trackerItems.flute >= 2);
       el.className = (dwDMAccess && lamp2 && weapon2 && keysOk) ? 'dng available' : 'dng unavail';
     })();
     // TOH is on Death Mountain — DM portal + hammer + DMlight required
@@ -6868,7 +6872,7 @@ window.refreshMapLogic = function() {
     (function() {
       var el = dngEls['toh'];
       if (!el || DUNGEONS['toh'].cleared || DUNGEONS['toh'].fullyCleared) return;
-      var DMlightOk = it.lamp || it.flute >= 1;
+      var DMlightOk = it.lamp || it.flute >= 2;
       if (!lwDMok || !hammer2 || !DMlightOk) { el.className = 'dng unavail'; return; }
       // Access is fine — and from here the colour belongs to what is actually
       // left inside, which the quadrant pass above already worked out. This
@@ -8556,7 +8560,7 @@ if (document.readyState === 'loading') {
     var hookshot = it.hookshot  >= 1;
     var hammer   = it.hammer    >= 1;
     var mirror   = it.mirror    >= 1;
-    var flute    = it.flute     >= 1;
+    var flute    = it.flute     >= 2;
     var flippers = it.flippers  >= 1;
     var aga      = it.agahnim   >= 1;
 
@@ -8580,14 +8584,14 @@ if (document.readyState === 'loading') {
       // Village of Outcasts / Skull Woods / Dark Lumberjack (checks 8, 64).
       dwNW: inv ? true : dwNWreach,
       // East Dark World, Palace of Darkness side (check 92).
-      dwEast: inv ? (hammer || (flute && lwAccess) || window.fluteDW() || flippers ||
+      dwEast: inv ? (hammer || flute || window.fluteDW() || flippers ||
                      (mirror && lwAccess) || (superBunny && mirror))
                   : pearl && (aga || (hammer && glove) || (titan && flippers)),
       // South Dark World, swamp and Ice Lake shore (checks 16, 67, 93).
       dwSouth: inv ? true : (dwNWreach || (aga && pearl && hammer)),
       // East Dark Death Mountain plateau (check 11, Super Bunny Cave). The
       // shop is outdoors, so unlike that cave it needs no light source.
-      dwDeathMountain: inv ? ((glove && window.gloveClimbsDM()) || (flute && lwAccess) || window.fluteToDDM())
+      dwDeathMountain: inv ? ((glove && window.gloveClimbsDM()) || flute || window.fluteToDDM())
                            : (pearl && titan && eastDM),
       // Dark World Shop only — it is never just "the Village of Outcasts".
       // Outside inverted it needs the hammer *on top of* village access. In
@@ -9110,9 +9114,15 @@ if (document.readyState === 'loading') {
   // 'entrance' is the only non-standard style today. Future styles register
   // here and in the <select>; applyMapStyle stays the single switch point.
   function applyMapStyle(style) {
-    var isEnt = (style === 'entrance');
+    // 'entrance-auto' is entrance shuffle with Auto Entrance on (js/entautotrack.js).
+    // Not race legal: greyed out in Race Mode (and OnlyADKD), see the select below.
+    var auto  = (style === 'entrance-auto') && !!(window._entAutotrack && window._entAutotrack.allowed());
+    if (style === 'entrance-auto' && !auto) style = 'entrance';
+    var isEnt = (style === 'entrance' || style === 'entrance-auto');
     window.trackerSettings.mapStyle       = style;
     window.trackerSettings.entranceShuffle = isEnt;
+    lsSet('alttp-ent-autotrack', auto ? 'yes' : 'no');
+    if (window._entAutotrack) window._entAutotrack.setEnabled(auto);
 
     lsSet('alttp-entrance-shuffle', isEnt ? 'yes' : 'no');
     lsSet('alttp-entrance-shuffle-mode', isEnt ? 'on' : 'none');
@@ -9256,8 +9266,19 @@ if (document.readyState === 'loading') {
 
   var styleSel = document.getElementById('set-mapstyle');
   if (styleSel) {
-    styleSel.value = window.trackerSettings.mapStyle || 'standard';
-    styleSel.addEventListener('change', function() { applyMapStyle(styleSel.value); });
+    var autoOpt = styleSel.querySelector('option[value="entrance-auto"]');
+    var autoAllowed = !(localStorage.getItem('alttp-race-mode') === 'yes' || (typeof onlyAdkd === 'function' && onlyAdkd()));
+    if (autoOpt && !autoAllowed) { autoOpt.disabled = true; autoOpt.title = 'Not available in Race Mode'; }
+    var startStyle = window.trackerSettings.mapStyle || 'standard';
+    if (startStyle === 'entrance' && autoAllowed && localStorage.getItem('alttp-ent-autotrack') === 'yes') {
+      startStyle = 'entrance-auto';
+      window.trackerSettings.mapStyle = startStyle;
+    }
+    styleSel.value = startStyle;
+    styleSel.addEventListener('change', function() {
+      applyMapStyle(styleSel.value);
+      styleSel.value = window.trackerSettings.mapStyle;   // falls back to plain Entrance Shuffle if refused
+    });
   }
 
   var worldSel = document.getElementById('set-worldstate');
@@ -9462,6 +9483,6 @@ if (document.readyState === 'loading') {
 })();
 </script>
 <script src="js/mobile.js?v=18"></script>
-<script src="js/entautotrack.js?v=1121a"></script>
+<script src="js/entautotrack.js?v=1121b"></script>
 </body>
 </html>

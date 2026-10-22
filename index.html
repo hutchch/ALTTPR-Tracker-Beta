@@ -870,12 +870,19 @@ function syncAutotrackLock() {
   at.disabled = race;
   var g = at.closest('.autotrack-group');
   if (g) g.classList.toggle('locked', race);
+  // Only shown while Entrance Shuffle is on; off whenever it's hidden.
+  var es = document.getElementById('entranceshuffle-toggle');
+  var esOn = !!(es && es.checked);
+  if (!esOn) at.checked = false;
+  if (g) g.style.display = esOn ? '' : 'none';
   var l = document.getElementById('entautotrack-toggle-label');
   if (l) l.textContent = at.checked ? 'Yes' : 'No';
 }
 (function () {
   var rm = document.getElementById('racemode-toggle');
   if (rm) rm.addEventListener('change', syncAutotrackLock);
+  var es = document.getElementById('entranceshuffle-toggle');
+  if (es) es.addEventListener('change', syncAutotrackLock);
 })();
 
 // ── Seed link → settings ──────────────────────────────────────────────────────
@@ -1186,7 +1193,16 @@ function doorMetaToAlttpr(g) {
   return m;
 }
 
+// Auto Entrance is off unless the player turns it on for this run: the launcher
+// opens with it off, and reading a seed or applying a preset turns it off again
+// (Chris, Oct 2026 — a new seed's settings kept it on).
+function autotrackOff() {
+  var at = document.getElementById('entautotrack-toggle');
+  if (at) at.checked = false;
+}
+
 function applySeedMeta(meta) {
+  autotrackOff();
   var applied = [], skipped = [];
 
   // Dungeon Item Shuffle — translated through DUNGEON_ITEMS_MAP.
@@ -1708,9 +1724,6 @@ function launchTimer() {
 // opened straight away.
 function launchOnlyAdkd() {
   applyPresetSettings(BUILTIN_PRESETS.onlyadkd);
-  // OnlyADKD always launches with Auto Entrance off (Chris, Oct 2026).
-  var _at = document.getElementById('entautotrack-toggle');
-  if (_at) _at.checked = false;
   save();
   try {
     localStorage.setItem('alttp-preset', 'onlyadkd');
@@ -1874,8 +1887,6 @@ window.addEventListener('DOMContentLoaded', async function() {
   var raceVal = saved.raceMode || localStorage.getItem('alttp-race-mode') || 'no';
   var racemodeToggle = document.getElementById('racemode-toggle');
   if (racemodeToggle) racemodeToggle.checked = (raceVal === 'yes');
-  var atToggle = document.getElementById('entautotrack-toggle');
-  if (atToggle) atToggle.checked = ((saved.entAutotrack || localStorage.getItem('alttp-ent-autotrack')) === 'yes');
 
   var esVal = saved.entranceShuffle || localStorage.getItem('alttp-entrance-shuffle-mode') || 'none';
   var esToggleEl = document.getElementById('entranceshuffle-toggle');
@@ -2800,6 +2811,7 @@ function dshufWire() {
 // Apply a settings object to the actual form controls on the page.
 function applyPresetSettings(cfg) {
   if (!cfg) return;
+  autotrackOff();
   var disel = document.getElementById('dungeonitems-select');
   if (disel && cfg.dungeonItems !== undefined) {
     disel.value = cfg.dungeonItems;
