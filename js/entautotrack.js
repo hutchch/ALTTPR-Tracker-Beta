@@ -73,6 +73,13 @@
 
   // ── What a door event does on the map ──
   var inside = null;   // { door, id } while Link is in an interior he walked into
+  // The dark caves outside the dungeons (the randomizer's lamp rules): Old Man
+  // Cave, Death Mountain Return Cave, Old Man House. Gone into without the
+  // lamp, the door is labelled Dark and left uncleared instead of being cleared
+  // as an empty connector (Chris, Oct 2026). Old Man House keeps its Mount label.
+  var DARK_CAVES = { 0x06: 1, 0x07: 1, 0x2e: 1, 0x2f: 1, 0x30: 1, 0x31: 1 };
+  function darkNoLamp(id) { return !!DARK_CAVES[id] && !(window.trackerItems || {}).lamp; }
+
   function onEnter(from, s) {
     inside = null;
     if (!from || !entMapOn()) return;
@@ -82,19 +89,57 @@
                              : matchDoor(from.area, from.x, from.y, DUNGEON_DOOR_MAX);
     if (!door) return;
     inside = { door: door, id: s.entrance };
-    if (dest[0] && window._entAutoLabel) window._entAutoLabel(door, dest[0]);
-    if ((dest[1] & 1) && window.markEntranceClearedByName) window.markEntranceClearedByName(door);
+    var dark = darkNoLamp(s.entrance);
+    var code = dest[0] || (dark ? 'Dark' : '');
+    if (code && window._entAutoLabel) window._entAutoLabel(door, code);
+    if ((dest[1] & 1) && !dark && window.markEntranceClearedByName) window.markEntranceClearedByName(door);
     if (ITEM_CHECK[s.entrance] != null && window._entLinkItemCheck) window._entLinkItemCheck(door, ITEM_CHECK[s.entrance]);
   }
+  // A start location (Link's House, Sanctuary, the Mountain) has no way in:
+  // Link appears inside after a reset or save & quit. So when he walks out
+  // without having been seen going in, the door he comes out of is the start's
+  // door — label it from the entrance id the game still holds (Chris, Oct 2026).
+  // $10E is 0 for Link's House. Only the start labels, so a cave whose entry
+  // was missed (autotrack turned on mid-cave) isn't guessed at.
+  var START_CODES = { Link: 1, Sanc: 1, Mount: 1 };
+  function onSpawnExit(s) {
+    var dest = s.entrance === 0 ? ['Link', 0] : DEST[s.entrance];
+    if (!dest || !START_CODES[dest[0]]) return;
+    var door = matchDoor(s.area, s.x, s.y, EXIT_DOOR_MAX);
+    if (!door) return;
+    if (window._entAutoLabel) window._entAutoLabel(door, dest[0]);
+    if ((dest[1] & 1) && window.markEntranceClearedByName) window.markEntranceClearedByName(door);
+  }
+
+  // Each dungeon door opens into its own room, and Link walks out of a dungeon
+  // from that room — so the last room before he steps outside says which of the
+  // dungeon's doors he came out of, whichever door he went in by (Chris, Oct
+  // 2026: walking through Desert and out another door marked nothing).
+  // Rooms from the randomizer's door table (checked: DP W 0x83, HC E 0x62,
+  // PoD 0x4A and TR W 0x23 all match the probe logs).
+  var DUNGEON_EXIT_ROOM = {
+    0x84: 'DP M', 0x83: 'DP W', 0x85: 'DP E', 0x63: 'DP', 0xc9: 'EP', 0x77: 'ToH',
+    0x61: 'HC M', 0x60: 'HC W', 0x62: 'HC E', 0xe0: 'CT', 0xdb: 'TT',
+    0x58: 'SW M', 0x57: 'SW E', 0x56: 'SW W', 0x59: 'SW', 0x0e: 'IP', 0x98: 'MM',
+    0x4a: 'PoD', 0x28: 'SP', 0xd6: 'TR M', 0x23: 'TR W', 0x24: 'TR E', 0xd5: 'TR', 0x0c: 'GT'
+  };
+  var lastInRoom = null;
   function onExit(s) {
     var was = inside; inside = null;
-    if (!was || !entMapOn()) return;
+    if (!entMapOn()) return;
+    var dCode = lastInRoom != null ? DUNGEON_EXIT_ROOM[lastInRoom] : null;
+    if (dCode) {
+      var dOut = matchDoor(s.area, s.x, s.y, EXIT_DOOR_MAX);
+      if (dOut && window._entAutoLabel) window._entAutoLabel(dOut, dCode);
+      return;
+    }
+    if (!was) { onSpawnExit(s); return; }
     var dest = DEST[was.id];
     if (!dest || (dest[1] & 4)) return;          // dungeons: their labels already group the doors
     var out = matchDoor(s.area, s.x, s.y, EXIT_DOOR_MAX);
     if (!out || out === was.door) return;
     if (window._entAutoConnect) window._entAutoConnect(was.door, out);
-    if ((dest[1] & 1) && window.markEntranceClearedByName) window.markEntranceClearedByName(out);
+    if ((dest[1] & 1) && !darkNoLamp(was.id) && window.markEntranceClearedByName) window.markEntranceClearedByName(out);
   }
 
   // ── Transition watcher (same rules as entranceprobe.html) ──
@@ -102,12 +147,13 @@
   // is never used.
   var prev = null, lastOutside = null, pending = null;
   function watch(s) {
-    if (prev && prev.mode >= 0x06 && s.mode < 0x06) { pending = null; inside = null; lastOutside = null; }
+    if (prev && prev.mode >= 0x06 && s.mode < 0x06) { pending = null; inside = null; lastOutside = null; lastInRoom = null; }
     var ok = prev && prev.mode === s.mode && prev.indoors === s.indoors && prev.room === s.room && prev.area === s.area;
     if (s.mode === 0x09 || s.mode === 0x0B) {
       if (pending && pending.kind === 'exit' && ok) { pending = null; onExit(s); }
       if (!s.indoors && ok) lastOutside = s;
     }
+    if (s.mode === 0x07 && s.indoors && ok) lastInRoom = s.room;
     if (s.mode === 0x07 && pending && pending.kind === 'enter' && ok) { var f = pending.from; pending = null; onEnter(f, s); }
     if (prev && !prev.indoors && s.indoors && s.mode >= 0x06) pending = { kind: 'enter', from: lastOutside };
     if (prev && prev.indoors && !s.indoors && s.mode >= 0x06) pending = { kind: 'exit' };
@@ -163,6 +209,7 @@
   }
 
   window._entAutotrack = { watch: watch, parse: parse, matchDoor: matchDoor, matchHole: matchHole, DEST: DEST,
-                           setEnabled: setEnabled, isOn: function () { return on; }, allowed: allowed };
+                           setEnabled: setEnabled, isOn: function () { return on; }, allowed: allowed,
+                           insideDoor: function () { return inside ? inside.door : null; } };
   setEnabled(enabled());
 })();

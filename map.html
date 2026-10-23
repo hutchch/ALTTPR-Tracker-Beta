@@ -6050,8 +6050,15 @@ window._applyInvertedDungeons(_inverted);
   };
   window._entClearItemDoors = function(ids) {
     var map = entItemChecks();
+    // Collected while Link is inside: the door he came in by is the one, even
+    // when it was labelled Item by hand and autotrack never knew its cave
+    // (Chris, Oct 2026 — Lumberjack Tree Tree stayed marked after the item).
+    var here = window._entAutotrack && window._entAutotrack.insideDoor && window._entAutotrack.insideDoor();
+    if (here && entLabels[here] === 'Item' && ids.length && map[here] == null) map[here] = ids[0];
     Object.keys(map).forEach(function(ename) {
-      if (ids.indexOf(map[ename]) !== -1 && entLabels[ename] === 'Item') window.markEntranceClearedByName(ename);
+      if (ids.indexOf(map[ename]) === -1 || entLabels[ename] !== 'Item') return;
+      window.markEntranceClearedByName(ename);
+      setTag('ent:' + ename, null);   // collected: the item picture goes, as a check dot's does
     });
   };
   window._entAutoConnect = function(a, b) {
@@ -9483,6 +9490,6 @@ if (document.readyState === 'loading') {
 })();
 </script>
 <script src="js/mobile.js?v=18"></script>
-<script src="js/entautotrack.js?v=1121b"></script>
+<script src="js/entautotrack.js?v=1121f"></script>
 </body>
 </html>

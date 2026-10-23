@@ -1,0 +1,192 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Entrance Probe</title>
+<!--
+  entranceprobe.html (Chris, Oct 2026) — a probe for entrance-shuffle
+  autotracking. Not part of the tracker: nothing loads it. Open it in a browser
+  with QUsb2Snes / SNI running and the game attached, press Connect, then play
+  an entrance-shuffle seed and walk in and out of doors. Every time Link goes
+  indoors or back out, it logs what the game's memory said just before and
+  just after. Save the log and send it over.
+
+  What it reads (WRAM, polled ~15 times a second):
+    $10 / $11   game mode / submode       $1B       indoors flag
+    $20 / $22   Link's Y / X (16-bit)     $8A       overworld area
+    $A0         room id (16-bit)          $10E      entrance id (16-bit)
+    $40C        dungeon id
+  plus the raw bytes $00-$FF, $100-$11F and $400-$40F before and after each
+  transition, so other addresses can be checked later without a new probe.
+
+  "Nearest guess" is the closest entrance on the tracker's map to where Link
+  stood: the map's positions are the game's overworld coordinates / 4096. The
+  list below is a copy of entrances_data.json (140 entrances).
+-->
+<style>
+  body { font-family: Arial, sans-serif; background: #111; color: #ddd; margin: 16px; font-size: 13px; }
+  h1 { font-size: 18px; margin: 0 0 6px; }
+  .bar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin: 8px 0; }
+  input, button { background: #222; color: #eee; border: 1px solid #555; border-radius: 4px; padding: 4px 8px; font-size: 13px; }
+  input.port { width: 60px; } input#host { width: 100px; } input#note { flex: 1; min-width: 260px; }
+  button { cursor: pointer; } button:disabled { opacity: .5; cursor: default; }
+  #status { padding: 2px 8px; border-radius: 4px; background: #222; }
+  #status.ok { color: #2ecc71; } #status.err { color: #e74c3c; }
+  #live { font-family: Consolas, monospace; background: #1a1a1a; border: 1px solid #333; padding: 6px 8px; border-radius: 4px; white-space: pre; }
+  table { border-collapse: collapse; width: 100%; margin-top: 8px; }
+  th, td { border-bottom: 1px solid #2a2a2a; padding: 4px 6px; text-align: left; vertical-align: top; }
+  th { color: #999; font-weight: normal; }
+  td.mono { font-family: Consolas, monospace; }
+  tr.enter td:first-child { color: #2ecc71; } tr.exit td:first-child { color: #5a8eff; } tr.reset td:first-child { color: #e6a23c; }
+  .help { color: #999; max-width: 900px; line-height: 1.4; }
+</style>
+</head>
+<body>
+<h1>Entrance Probe</h1>
+<div class="help">Connect with the game running, then play an entrance-shuffle seed. Walk in and out of doors (a mix of caves, houses, connectors, a dungeon and a hole drop). Type what you're about to do in the note box first if you can, e.g. "into Kakariko Well door". When done, press <b>Save log</b> and send the file.</div>
+<div class="bar">
+  <label>Host <input id="host" value="localhost"></label>
+  <label>Port <input class="port" id="port" value="23074"></label>
+  <button id="go">Connect</button>
+  <span id="status">not connected</span>
+</div>
+<div class="bar">
+  <label style="flex:1;display:flex;gap:6px;align-items:center">Note <input id="note" placeholder="what you're about to do (goes with the next event)"></label>
+  <button id="save" disabled>Save log</button>
+  <button id="copy" disabled>Copy log</button>
+  <button id="clear">Clear</button>
+</div>
+<div id="live">waiting…</div>
+<table>
+  <thead><tr><th>#</th><th>Event</th><th>Before</th><th>After</th><th>Nearest guess</th><th>Note</th></tr></thead>
+  <tbody id="log"></tbody>
+</table>
+<script>
+(function () {
+  var ENTRANCES = [["Links House","l",56.0,72.0],["Bonk Fairy (Light)","l",49.0,67.0],["    Dam","l",48.0,96.0],["Cave 45","l",28.0,84.0],["Potion Shop","l",81.4,35.0],["Waterfall of Wishing","l",91.4,17.0],["Light Hype Fairy","l",62.0,80.0],["Hyrule Castle Entrance (South)","l",51.4,46.0],["Hyrule Castle Entrance (West)","l",46.4,41.0],["Hyrule Castle Entrance (East)","l",56.4,41.0],["Agahnims Tower","l",51.4,42.0],["Hyrule Castle Secret Entrance Stairs","l",56.4,44.0],["Hyrule Castle Secret Entrance Drop","l",61.0,42.5],["    Sanctuary","l",47.4,28.0],["Bonk Rock Cave","l",40.0,30.0],["Sanctuary Grave","l",53.4,30.0],["Graveyard Cave","l",58.6,28.4],["Kings Grave","l",62.0,30.0],["North Fairy Cave","l",68.0,29.0],["North Fairy Cave Drop","l",66.0,32.0],["Lost Woods Gamble","l",20.2,3.1],["Lost Woods Hideout Drop","l",20.6,13.2],["Lost Woods Hideout Stump","l",20.0,16.0],["Lumberjack House","l",35.2,7.4],["Lumberjack Tree Cave","l",34.0,4.5],["Lumberjack Tree Tree","l",31.4,9.0],["Old Man Cave (West)","l",36.0,19.7],["Fortune Teller (Light)","l",20.6,33.0],["Kakariko Well Drop","l",4.0,43.0],["Kakariko Well Cave","l",7.0,44.0],["Blinds Hideout","l",14.0,43.0],["Elder House (West)","l",16.4,43.0],["Elder House (East)","l",18.6,43.0],["Snitch Lady (West)","l",6.6,48.0],["Snitch Lady (East)","l",22.0,49.0],["Chicken House","l",11.2,55.0],["Sick Kids House","l",16.8,55.0],["Bush Covered House","l",21.8,55.0],["Light World Bomb Hut","l",4.6,61.0],["Kakariko Shop","l",12.6,59.0],["Tavern North","l",17.4,58.0],["Tavern (Front)","l",17.4,61.0],["Blacksmiths Hut","l",31.2,54.0],["Bat Cave Cave","l",33.2,57.0],["Bat Cave Drop","l",34.6,55.0],["    Library","l",16.8,67.0],["Two Brothers House (West)","l",12.0,72.0],["Two Brothers House (East)","l",16.0,72.0],["Kakariko Gamble Game","l",22.8,70.3],["Eastern Palace","l",97.2,40.0],["Sahasrahlas Hut","l",82.8,46.0],["Lake Hylia Fairy","l",84.0,65.4],["Long Fairy Cave","l",99.2,71.0],["Desert Palace Entrance (South)","l",8.8,82.0],["Desert Palace Entrance (West)","l",5.0,81.0],["Desert Palace Entrance (East)","l",12.6,81.0],["Desert Palace Entrance (North)","l",8.8,78.0],["Checkerboard Cave","l",19.0,79.0],["Aginahs Cave","l",21.6,83.0],["Desert Fairy","l",29.4,90.0],["50 Rupee Cave","l",32.6,96.0],["Lake Hylia Shop","l",74.4,78.0],["Lake Hylia Fortune Teller","l",66.4,81.0],["Mini Moldorm Cave","l",66.8,95.0],["Capacity Upgrade","l",80.8,86.0],["Ice Rod Cave","l",90.6,78.0],["Good Bee Cave","l",93.4,78.0],["20 Rupee Cave","l",91.8,80.0],["Tower of Hera","l",57.4,5.0],["Spectacle Rock Cave Peak","l",47.0,15.0],["Spectacle Rock Cave (Bottom)","l",50.0,16.0],["Spectacle Rock Cave","l",50.2,11.0],["Old Man Cave (East)","l",41.6,20.0],["Death Mountain Return Cave (East)","l",40.8,14.0],["Death Mountain Return Cave (West)","l",37.4,16.0],["Old Man House (Bottom)","l",46.6,25.0],["Old Man House (Top)","l",55.0,17.4],["Paradox Cave (Top)","l",86.6,7.4],["Paradox Cave (Middle)","l",87.6,23.0],["Paradox Cave (Bottom)","l",87.6,16.0],["Spiral Cave","l",81.0,10.0],["Spiral Cave (Bottom)","l",81.0,14.0],["Hookshot Fairy","l",85.0,16.0],["Fairy Ascension Cave (Top)","l",83.2,12.4],["Fairy Ascension Cave (Bottom)","l",83.2,14.9],["Mimic Cave","l",85.8,10.0],["Big Bomb Shop","d",56.0,72.0],["Bonk Fairy (Dark)","d",49.0,67.0],["Hype Cave","d",62.0,80.0],["Swamp Palace","d",48.4,96.0],["Dark Sanctuary Hint","d",47.4,28.0],["Red Shield Shop","d",34.8,46.6],["Dark Potion Shop","d",81.4,35.0],["Pyramid Hole","d",51.4,42.0],["Pyramid Fairy","d",48.0,50.0],["Pyramid Exit","d",44.8,50.0],["Skull Woods Final Section","d",5.4,6.5],["Skull Woods Second Section Door (West)","d",7.4,14.0],["Skull Woods Second Section Hole","d",13.4,10.0],["Skull Woods Second Section Door (East)","d",15.6,16.0],["Skull Woods First Section Hole (West)","d",17.0,19.0],["Skull Woods First Section Hole (North)","d",20.4,13.5],["Skull Woods First Section Door","d",19.4,16.0],["Skull Woods First Section Hole (East)","d",21.6,18.0],["Dark Lumberjack Shop","d",35.0,6.7],["Bumper Cave (Bottom)","d",37.0,19.0],["Fortune Teller (Dark)","d",20.2,33.0],["Chest Game","d",6.0,47.0],["Thieves Town","d",14.0,49.0],["C-Shaped House","d",22.0,49.0],["Dark World Shop","d",22.0,54.0],["    Brewery","d",12.6,59.0],["Hammer Peg Cave","d",33.0,62.0],["Archery Game","d",23.0,71.0],["Palace of Darkness","d",97.2,41.0],["Palace of Darkness Hint","d",86.6,52.0],["Dark Lake Hylia Fairy","d",84.0,65.7],["East Dark World Hint","d",99.2,71.0],["Ice Palace","d",81.0,87.0],["Dark Lake Hylia Shop","d",66.6,81.0],["Dark Lake Hylia Ledge Fairy","d",90.6,78.0],["Dark Lake Hylia Ledge Hint","d",93.4,78.0],["Dark Lake Hylia Ledge Spike Cave","d",91.8,80.0],["Misery Mire","d",8.8,84.0],["Mire Shed","d",5.4,81.0],["Mire Fairy","d",12.6,81.0],["Mire Hint","d",21.2,83.0],["Ganons Tower","d",57.6,5.0],["Spike Cave","d",58.8,16.0],["Bumper Cave (Top)","d",37.6,16.0],["Dark Death Mountain Fairy","d",41.6,20.0],["Hookshot Cave Back Entrance","d",81.6,3.0],["Hookshot Cave","d",84.4,7.5],["Superbunny Cave (Top)","d",87.6,7.2],["Superbunny Cave (Bottom)","d",85.0,16.0],["Dark Death Mountain Shop","d",87.6,16.0],["Turtle Rock","d",95.4,9.0],["Turtle Rock Isolated Ledge Entrance","d",83.4,13.0],["Dark Death Mountain Ledge (West)","d",81.2,10.0],["Dark Death Mountain Ledge (East)","d",85.8,10.0]];
+  var ws = null, queue = [], log = [], polling = false;
+  function $(id) { return document.getElementById(id); }
+  function setStatus(t, cls) { var s = $('status'); s.textContent = t; s.className = cls || ''; }
+
+  // ── usb2snes / SNI: a GetAddress reply can come back in several binary
+  // frames; collect until the requested length has arrived. ──
+  function read(addr, len) {
+    return new Promise(function (resolve) {
+      queue.push({ len: len, buf: new Uint8Array(0), done: resolve });
+      ws.send(JSON.stringify({ Opcode: 'GetAddress', Space: 'SNES', Operands: [addr.toString(16), len.toString(16)] }));
+    });
+  }
+  function onBinary(data) {
+    var q = queue[0]; if (!q) return;
+    var add = new Uint8Array(data), merged = new Uint8Array(q.buf.length + add.length);
+    merged.set(q.buf); merged.set(add, q.buf.length); q.buf = merged;
+    if (q.buf.length >= q.len) { queue.shift(); q.done(q.buf.subarray(0, q.len)); }
+  }
+
+  // ── One snapshot of the addresses that matter ──
+  async function snapshot() {
+    var a = await read(0xF50000, 0x100), b = await read(0xF50100, 0x20), c = await read(0xF50400, 0x10);
+    var w = function (arr, i) { return arr[i] | (arr[i + 1] << 8); };
+    return {
+      t: Date.now(),
+      mode: a[0x10], sub: a[0x11], indoors: a[0x1B],
+      y: w(a, 0x20), x: w(a, 0x22), owArea: a[0x8A], room: w(a, 0xA0),
+      entrance: w(b, 0x0E), dungeon: c[0x0C],
+      raw: { '00': hex(a), '100': hex(b), '400': hex(c) }
+    };
+  }
+  function hex(arr) { return Array.prototype.map.call(arr, function (v) { return ('0' + v.toString(16)).slice(-2); }).join(''); }
+  function h(v, n) { return '$' + ('000' + v.toString(16).toUpperCase()).slice(-(n || 2)); }
+
+  // Nearest entrances on the tracker's map to where Link stood (overworld only).
+  function nearest(s) {
+    var world = s.owArea >= 0x40 ? 'd' : 'l';
+    var px = s.x / 4096 * 100, py = s.y / 4096 * 100;
+    return ENTRANCES.filter(function (e) { return e[1] === world; })
+      .map(function (e) { return { name: e[0], d: Math.hypot(e[2] - px, e[3] - py) }; })
+      .sort(function (p, q) { return p.d - q.d; }).slice(0, 3);
+  }
+  function brief(s) {
+    return 'mode ' + h(s.mode) + '/' + h(s.sub) + (s.indoors ? ' indoors' : ' outside') +
+      ' · area ' + h(s.owArea) + ' · x ' + s.x + ' y ' + s.y +
+      ' · room ' + h(s.room, 4) + ' · entrance ' + h(s.entrance, 4) + ' · dungeon ' + h(s.dungeon);
+  }
+
+  // ── Transition watcher ──
+  // Gameplay modes: 0x07 indoors, 0x09 overworld (0x0B special overworld).
+  // Below 0x06 is the title / file select: a save & quit or reset.
+  var lastOutside = null, lastInside = null, pending = null, prev = null;
+  function steady(s) { return prev && prev.mode === s.mode && prev.indoors === s.indoors && prev.room === s.room && prev.owArea === s.owArea; }
+  function watch(s) {
+    if (prev && prev.mode >= 0x06 && s.mode < 0x06) { add('reset', prev, s, null); pending = null; }
+    var ok = steady(s);
+    if (s.mode === 0x09 || s.mode === 0x0B) {
+      if (pending && pending.kind === 'exit' && ok) { add('exit', pending.from, s, nearest(s)); pending = null; }
+      if (!s.indoors && ok) lastOutside = s;
+    }
+    if (s.mode === 0x07) {
+      if (pending && pending.kind === 'enter' && ok) { add('enter', pending.from, s, pending.from ? nearest(pending.from) : null); pending = null; }
+      if (s.indoors && ok) lastInside = s;
+    }
+    if (prev && !prev.indoors && s.indoors && s.mode >= 0x06) pending = { kind: 'enter', from: lastOutside };
+    if (prev && prev.indoors && !s.indoors && s.mode >= 0x06) pending = { kind: 'exit', from: lastInside };
+    prev = s;
+  }
+  function add(kind, before, after, guess) {
+    var note = $('note').value.trim(); if (kind !== 'reset') $('note').value = '';
+    var e = { n: log.length + 1, kind: kind, note: note, before: before, after: after,
+              nearest: guess ? guess.map(function (g) { return g.name + ' (' + g.d.toFixed(1) + ')'; }) : null };
+    log.push(e); $('save').disabled = $('copy').disabled = false;
+    var tr = document.createElement('tr'); tr.className = kind;
+    tr.innerHTML = '<td>' + e.n + '</td><td>' + kind + '</td><td class="mono">' + (before ? brief(before) : '—') +
+      '</td><td class="mono">' + (after ? brief(after) : '—') + '</td><td>' + (e.nearest ? e.nearest.join('<br>') : '—') +
+      '</td><td></td>';
+    tr.lastChild.textContent = note;
+    $('log').insertBefore(tr, $('log').firstChild);
+  }
+
+  async function poll() {
+    if (polling) return; polling = true;
+    while (ws && ws.readyState === 1) {
+      try { var s = await snapshot(); $('live').textContent = brief(s); watch(s); }
+      catch (e) { setStatus('read failed: ' + e.message, 'err'); break; }
+      await new Promise(function (r) { setTimeout(r, 60); });
+    }
+    polling = false;
+  }
+
+  $('go').onclick = function () {
+    var btn = this; btn.disabled = true; queue = [];
+    try { if (ws) ws.close(); } catch (e) {}
+    var host = $('host').value.trim() || 'localhost', port = $('port').value.trim() || '23074';
+    setStatus('connecting…');
+    ws = new WebSocket('ws://' + host + ':' + port); ws.binaryType = 'arraybuffer';
+    ws.onerror = function () { setStatus('could not reach ' + host + ':' + port, 'err'); btn.disabled = false; };
+    ws.onclose = function () { btn.disabled = false; if (polling) setStatus('disconnected', 'err'); };
+    ws.onopen = function () { ws.send(JSON.stringify({ Opcode: 'DeviceList', Space: 'SNES' })); };
+    var attached = false;
+    ws.onmessage = function (ev) {
+      if (typeof ev.data !== 'string') { onBinary(ev.data); return; }
+      var msg; try { msg = JSON.parse(ev.data); } catch (e) { return; }
+      if (!msg.Results || attached) return;
+      if (!msg.Results.length) { setStatus('no device found — is the emulator running?', 'err'); btn.disabled = false; return; }
+      attached = true;
+      ws.send(JSON.stringify({ Opcode: 'Attach', Space: 'SNES', Operands: [msg.Results[0]] }));
+      setStatus('watching ' + msg.Results[0], 'ok');
+      poll();
+    };
+  };
+
+  function logText() { return JSON.stringify({ probe: 'entranceprobe', when: new Date().toISOString(), events: log }, null, 1); }
+  $('save').onclick = function () {
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([logText()], { type: 'application/json' }));
+    a.download = 'entrance-probe-' + new Date().toISOString().slice(0, 16).replace(/[:T]/g, '-') + '.json';
+    a.click();
+  };
+  $('copy').onclick = function () { navigator.clipboard.writeText(logText()).then(function () { setStatus('log copied', 'ok'); }); };
+  $('clear').onclick = function () { log = []; $('log').innerHTML = ''; $('save').disabled = $('copy').disabled = true; };
+})();
+</script>
+</body>
+</html>

@@ -483,21 +483,21 @@
   "top": 5.0
  },
  {
-  "name": "Spectacle Rock Cave Peak",
+  "name": "Spectacle Rock Cave (Bottom)",
   "world": "light",
   "idx": 70,
   "left": 47.0,
   "top": 15.0
  },
  {
-  "name": "Spectacle Rock Cave (Bottom)",
+  "name": "Spectacle Rock Cave",
   "world": "light",
   "idx": 71,
   "left": 50.0,
   "top": 16.0
  },
  {
-  "name": "Spectacle Rock Cave",
+  "name": "Spectacle Rock Cave Peak",
   "world": "light",
   "idx": 69,
   "left": 50.2,

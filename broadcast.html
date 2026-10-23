@@ -1396,6 +1396,11 @@ function buildV2View(container) {
   });
   root.appendChild(grid);
   container.appendChild(root);
+  // Detached Modern dungeon slots, never shown: applySnap's dungeon pass works
+  // on dngEls, and it's that pass that fires the prize / map / compass / big
+  // key animations. Without them Modern v2 skipped it, so none played (Chris,
+  // Oct 2026). Same trick as the hidden boomerang holder.
+  ROW4.forEach(function(k) { buildDungeonSlot(k); });
   renderV2View();   // the empty state straight away, before the first snapshot
   refreshAllFills();
   fitV2View();
