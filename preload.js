@@ -28,5 +28,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   sendApiItems: (snap) => ipcRenderer.send('api-items-update', snap),
   sendApiConnection: (info) => ipcRenderer.send('api-connection-status', info),
   onUpdateStatus:  (cb) => ipcRenderer.on('update-status', (_e, data) => cb(data)),
+  sniStatus:       ()   => ipcRenderer.invoke('sni-status'),
+  sniSetAutoStart: (on) => ipcRenderer.invoke('sni-set-autostart', on),
   isElectron:   true,
 });

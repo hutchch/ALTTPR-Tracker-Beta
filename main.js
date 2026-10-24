@@ -1432,8 +1432,67 @@ ipcMain.handle('load-ent-state', async () => {
   return { ok: true, json };
 });
 
+// ── Bundled SNI ───────────────────────────────────────────────────────────────
+// SNI (github.com/alttpo/sni, MIT) ships inside the build — resources/sni,
+// filled by `npm run fetch-sni` (tools/fetch-sni.js). On launch the tracker
+// starts it unless something already answers on 23074 (the player's own SNI or
+// QUsb2Snes), and stops it on quit. "Start SNI automatically" in the launcher's
+// App Settings turns that off (Chris, Oct 2026).
+const net = require('net');
+const { spawn } = require('child_process');
+let sniChild = null;
+
+function sniDir() {
+  const os = process.platform === 'win32' ? 'win' : process.platform === 'darwin' ? 'mac' : 'linux';
+  return app.isPackaged ? path.join(process.resourcesPath, 'sni') : path.join(__dirname, 'sni', os);
+}
+function sniExe() { return path.join(sniDir(), process.platform === 'win32' ? 'sni.exe' : 'sni'); }
+function sniAutoStart() { return store.get('sniAutoStart', true) !== false; }
+
+// Is anything listening on the usb2snes port already?
+function portInUse(port) {
+  return new Promise((resolve) => {
+    const sock = net.createConnection({ host: '127.0.0.1', port });
+    const done = (v) => { sock.destroy(); resolve(v); };
+    sock.setTimeout(600, () => done(false));
+    sock.once('connect', () => done(true));
+    sock.once('error', () => done(false));
+  });
+}
+
+async function startSni() {
+  if (sniChild || !sniAutoStart()) return;
+  const exe = sniExe();
+  if (!fs.existsSync(exe)) { console.log('[sni] not bundled:', exe); return; }
+  if (await portInUse(23074)) { console.log('[sni] 23074 already in use — leaving the running one alone'); return; }
+  try { if (process.platform !== 'win32') fs.chmodSync(exe, 0o755); } catch (e) {}
+  try {
+    sniChild = spawn(exe, [], { cwd: sniDir(), stdio: 'ignore', windowsHide: true });
+    sniChild.on('exit', (code) => { console.log('[sni] exited', code); sniChild = null; });
+    sniChild.on('error', (e) => { console.warn('[sni] failed to start:', e.message); sniChild = null; });
+    console.log('[sni] started', exe);
+  } catch (e) { console.warn('[sni] failed to start:', e.message); sniChild = null; }
+}
+function stopSni() {
+  if (!sniChild) return;
+  try { sniChild.kill(); } catch (e) {}
+  sniChild = null;
+}
+
+ipcMain.handle('sni-status', async () => ({
+  autoStart: sniAutoStart(),
+  bundled:   fs.existsSync(sniExe()),
+  ours:      !!sniChild,
+  listening: await portInUse(23074),
+}));
+ipcMain.handle('sni-set-autostart', async (_e, on) => {
+  store.set('sniAutoStart', !!on);
+  if (on) await startSni(); else stopSni();
+  return { autoStart: sniAutoStart(), ours: !!sniChild };
+});
+
 // Clean up on quit
-app.on('will-quit', () => { globalShortcut.unregisterAll(); });
+app.on('will-quit', () => { globalShortcut.unregisterAll(); stopSni(); });
 
 // ── Plugin host ───────────────────────────────────────────────────────────────
 // Optional drop-in plugins live in <appRoot>/plugins/<name>/ with a plugin.json
@@ -1494,6 +1553,7 @@ app.whenReady().then(() => {
   console.log('__dirname        :', __dirname);
   console.log('resourcesPath    :', process.resourcesPath);
   console.log('appRoot          :', getRoot());
+  startSni();
   createLauncher();
   loadPlugins();
   applyApiSettings();

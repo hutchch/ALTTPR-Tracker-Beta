@@ -434,6 +434,11 @@ input:focus, select:focus { outline: none; border-color: #4dff88; }
     <input id="ws-port" type="text" value="23074" placeholder="23074">
   </div>
   <div class="app-settings-info">QUSB2SNES / SNI — default port 23074</div>
+  <div class="app-settings-row" id="sni-row" style="display:none">
+    <label>Start SNI</label>
+    <input id="sni-autostart" type="checkbox" checked>
+  </div>
+  <div class="app-settings-info" id="sni-status"></div>
 
   <hr class="app-settings-divider">
   <div class="app-settings-section-label">Items API</div>
@@ -845,6 +850,28 @@ var IS_ELECTRON = !!(window.electronAPI && window.electronAPI.isElectron);
     var el = document.getElementById('app-version');
     if (el && v) el.textContent = 'Version ' + v;
   }).catch(function() { /* keep the fallback text */ });
+})();
+
+// ── Bundled SNI (main.js starts it; this is the switch and a status line) ────
+(function () {
+  var api = window.electronAPI;
+  if (!api || !api.sniStatus) return;
+  var row = document.getElementById('sni-row'), box = document.getElementById('sni-autostart'),
+      msg = document.getElementById('sni-status');
+  function show(st) {
+    row.style.display = '';
+    box.checked = !!st.autoStart;
+    msg.textContent = !st.bundled ? 'SNI is not included in this build.'
+      : st.ours ? 'Built-in SNI is running.'
+      : st.listening ? 'Using the SNI / QUsb2Snes already running.'
+      : st.autoStart ? 'Built-in SNI is not running.' : 'Built-in SNI is off.';
+  }
+  function refresh() { Promise.resolve(api.sniStatus()).then(show).catch(function () {}); }
+  box.addEventListener('change', function () {
+    Promise.resolve(api.sniSetAutoStart(box.checked)).then(function () { setTimeout(refresh, 800); });
+  });
+  refresh();
+  setTimeout(refresh, 1500);   // main starts it alongside this window
 })();
 
 // Wire a checkbox-toggle to its adjacent Yes/No text label.
