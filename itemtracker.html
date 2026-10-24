@@ -32,6 +32,14 @@
     </div>
     <div class="its-body">
       <div class="its-section">
+        <h4>Layout</h4>
+        <div class="its-radios">
+          <label><input type="radio" name="its-layout" value="standard"> View-1</label>
+          <label><input type="radio" name="its-layout" value="stacked"> View-2</label>
+        </div>
+      </div>
+
+      <div class="its-section">
         <h4>Main Background</h4>
         <div class="its-radios">
           <label><input type="radio" name="its-bg" value="black"> Black</label>
@@ -474,7 +482,7 @@ function fitWindowToContent() {
   try {
     var s = window._trackerScale || 1;
     var body = document.body;
-    var container = document.querySelector('.tracker-container');
+    var container = document.getElementById('stk-root') || document.querySelector('.tracker-container');
     var chromeW = window.outerWidth  - window.innerWidth;
     var chromeH = window.outerHeight - window.innerHeight;
     if (chromeW < 0) chromeW = 0;      // macOS has no left/right window chrome
@@ -1198,6 +1206,21 @@ function changeTrackerScale(delta) {
   setStatus('');
 })();
 </script>
-<script src="js/mobile.js?v=18"></script>
+<script>
+// Layout: the stacked rows are built once at load (js/mobile.js), so a change reloads.
+(function () {
+  var cur = 'standard';
+  try { cur = localStorage.getItem('alttp-items-layout') === 'stacked' ? 'stacked' : 'standard'; } catch (e) {}
+  document.querySelectorAll('input[name="its-layout"]').forEach(function (r) {
+    r.checked = r.value === cur;
+    r.addEventListener('change', function () {
+      if (!r.checked) return;
+      try { localStorage.setItem('alttp-items-layout', r.value); } catch (e) {}
+      location.reload();
+    });
+  });
+})();
+</script>
+<script src="js/mobile.js?v=27"></script>
 </body>
 </html>

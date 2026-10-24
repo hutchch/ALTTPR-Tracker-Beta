@@ -28,6 +28,7 @@ var SETTINGS = {
   dngCycleEnabled: false,        // In a dungeon, swap between the items and a dungeon card (released Oct 2026, off by default)
   dngItemsSecs:    10,           // ...the items for this many seconds
   dngCardSecs:     5,            // ...then the dungeon card for this many
+  dngCardOver:     'dungeons',   // ...shown over the dungeon row, or 'items' over the item rows
   itemAnimEnabled: false,        // When true, full-screen spin-in animation on item collect
   animShowLabel:   true,         // Show item name at bottom during animation
   mapAnimEnabled:    true,       // Play the collect animation when a dungeon map is obtained
@@ -154,6 +155,7 @@ function loadSettings() {
     SETTINGS.dngCycleEnabled = localStorage.getItem('alttp-broadcast-dng-card-on') === 'true';
     SETTINGS.dngItemsSecs    = parseInt(localStorage.getItem('alttp-broadcast-dng-items-secs'), 10) || 10;
     SETTINGS.dngCardSecs     = parseInt(localStorage.getItem('alttp-broadcast-dng-card-secs'), 10)  || 5;
+    SETTINGS.dngCardOver     = localStorage.getItem('alttp-broadcast-dng-card-over') === 'items' ? 'items' : 'dungeons';
     SETTINGS.itemAnimEnabled    = localStorage.getItem('alttp-broadcast-item-anim') === 'true';
     SETTINGS.animShowLabel      = localStorage.getItem('alttp-broadcast-anim-label') !== 'false';
     SETTINGS.mapAnimEnabled     = localStorage.getItem('alttp-broadcast-map-anim') !== 'false';
@@ -245,6 +247,7 @@ function saveSettings() {
     localStorage.setItem('alttp-broadcast-dng-card-on',       SETTINGS.dngCycleEnabled ? 'true' : 'false');
     localStorage.setItem('alttp-broadcast-dng-items-secs',  String(SETTINGS.dngItemsSecs));
     localStorage.setItem('alttp-broadcast-dng-card-secs',   String(SETTINGS.dngCardSecs));
+    localStorage.setItem('alttp-broadcast-dng-card-over',   SETTINGS.dngCardOver);
     localStorage.setItem('alttp-broadcast-item-anim',        SETTINGS.itemAnimEnabled    ? 'true' : 'false');
     localStorage.setItem('alttp-broadcast-anim-label',      SETTINGS.animShowLabel      ? 'true' : 'false');
     localStorage.setItem('alttp-broadcast-map-anim',        SETTINGS.mapAnimEnabled     ? 'true' : 'false');

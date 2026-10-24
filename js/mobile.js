@@ -7,6 +7,102 @@
 //                   over it). Reports the middle's position to the parent.
 //   map           → no bars; Light World on the left, Dark World on the right,
 //                   an empty gap between them for the game, sized to fit.
+// Stacked item tracker (Tracker Settings → Layout, Chris, Oct 2026): the items
+// in two rows; then Agahnim, CHECKS and BONKS, the prize counts and heart,
+// DEATHS, REVIVALS and FLUTES (each a box like CHECKS), GO; then the dungeons in a row, in the tablet's tall style.
+(function () {
+  var q = new URLSearchParams(location.search);
+  if (q.get('mobile') === '1') return;
+  if (!document.querySelector('script[src*="js/items.js"]')) return;
+  var on = false;
+  try { on = localStorage.getItem('alttp-items-layout') === 'stacked'; } catch (e) {}
+  if (!on) return;
+  document.documentElement.classList.add('stacked');
+  window._mobileLayout = true;   // every dungeon in the tall layout, as on the tablet
+
+  var css = document.createElement('style');
+  css.textContent = [
+    'html.stacked .tracker-container { display:none !important; }',
+    '#stk-root { display:inline-flex; flex-direction:column; align-items:center; gap:4px; padding:4px; }',
+    '#stk-root .stk-row { display:flex; justify-content:center; align-items:center; flex-wrap:wrap; }',
+    '#stk-root .stk-dungeons { align-items:flex-end; flex-wrap:nowrap; }',
+    '#stk-root .dungeon-slot { width:auto !important; margin:0 2px; }',
+    '#stk-root .stk-grid { display:grid; grid-template-columns:repeat(15, auto); justify-content:center; align-items:center; justify-items:center; }',
+    '#stk-root .stk-prizes { align-self:stretch; justify-content:space-between; flex-wrap:nowrap; }',
+    '#stk-root .stk-mid { display:flex; align-items:center; gap:6px; }',
+    '#stk-root .stk-mid .check-count-box { margin:0; }',
+    '#stk-root .stk-hccol { display:flex; flex-direction:column; align-items:stretch; gap:2px; margin:0 2px; }',
+    '#stk-root .stk-hccol .dungeon-slot { margin:0; }',
+    '#stk-root .stk-hccol .ct-group { flex-direction:column; width:auto; padding:2px 3px; border-color:#555; border-radius:3px; gap:2px; }',
+    '#stk-root.stk-big .item-count { font-size:14px; }',
+    // Agahnim and GO sit at the window's edges: open their name tooltips inward.
+    '#stk-root .stk-prizes > .item-slot:first-child::before { left:0; transform:none; }',
+    '#stk-root .stk-prizes > .item-slot:last-child::before { left:auto; right:0; transform:none; }',
+    '#stk-root .stat-box.stk-stat { flex-direction:column; justify-content:center; gap:2px; box-sizing:border-box;',
+    '  height:40px; min-width:40px; width:auto !important; margin:0 !important; padding:0 4px !important;',
+    '  border:1px solid #555; border-radius:6px; }',
+    '#stk-root .stk-stat .stat-label { font-size:7px; letter-spacing:0; line-height:1; }',
+    '#stk-root .stk-stat .stat-value { font-size:16px; line-height:1; }'
+  ].join('\n');
+  document.head.appendChild(css);
+
+  function build() {
+    var tc = document.querySelector('.tracker-container');
+    if (!tc) return;
+    // The desktop layout lines boxes up by measuring them; here it would fight the rows.
+    window.equalizeTopBoxes = function () {};
+    window.equalizeCrystalRow = function () {};
+    tc.querySelectorAll('[style*="width"]').forEach(function (e) { e.style.width = ''; });
+
+    var root = document.createElement('div'); root.id = 'stk-root';
+    function rowOf(cls, els) {
+      var r = document.createElement('div'); r.className = 'stk-row ' + cls;
+      els.forEach(function (e) { if (e) r.appendChild(e); });
+      root.appendChild(r); return r;
+    }
+    function q1(sel) { return tc.querySelector(sel); }
+    function item(k) { return k === 'bottles' ? q1('.bottle-grid') : q1('[data-item-key="' + k + '"]'); }
+
+    // Items in two rows (Chris, Oct 2026, from a Modern-style mockup).
+    var grid = document.createElement('div'); grid.className = 'stk-grid';
+    [['bow', 'boomerang', 'hookshot', 'bomb', 'mushroom', 'powder', 'firerod', 'icerod', 'bombos', 'ether', 'quake', 'moonpearl', 'sword', 'shield', 'tunic'],
+     ['lamp', 'hammer', 'shovel', 'flute', 'net', 'book', 'bottles', 'somaria', 'byrna', 'cape', 'mirror', 'halfmagic', 'boots', 'gloves', 'flippers']
+    ].forEach(function (row) {
+      row.forEach(function (k) { grid.appendChild(item(k) || document.createElement('div')); });
+    });
+    root.appendChild(grid);
+
+    // Third row: Agahnim at the left, GO at the right; centred between them
+    // CHECKS and BONKS, the prize counts and heart, DEATHS and REVIVALS.
+    var counts = q1('.count-row') ? [].slice.call(q1('.count-row').children).filter(function (c) {
+      return !c.classList.contains('dungeon-slot') && !c.classList.contains('check-count-box');
+    }) : [];
+    var prow = rowOf('stk-prizes', [item('agahnim')]);
+    var mid = document.createElement('div'); mid.className = 'stk-mid';
+    // BONKS, DEATHS, REVIVALS and FLUTES each a box of their own, like CHECKS.
+    [q1('.check-count-box'), q1('.stat-bonk')].concat(counts, [q1('.stat-death'), q1('.stat-revival'), q1('.stat-flute')])
+      .forEach(function (e) { if (e) { if (e.classList.contains('stat-box')) e.classList.add('stk-stat'); mid.appendChild(e); } });
+    prow.appendChild(mid);
+    var go = item('gomode'); if (go) prow.appendChild(go);
+
+    var dslot = function (k) { return document.querySelector('.dungeon-slot[data-dungeon-key="' + k + '"]'); };
+    // CT sits right on top of HC, in the room HC leaves under the taller boxes (Chris, Oct 2026).
+    var hcCol = document.createElement('div'); hcCol.className = 'stk-hccol';
+    [q1('.ct-group'), dslot('hc')].forEach(function (e) { if (e) hcCol.appendChild(e); });
+    rowOf('stk-dungeons', [hcCol].concat(['ep','dp','toh','pod','sp','sw','tt','ip','mm','tr','gt'].map(dslot)));
+    tc.parentNode.insertBefore(root, tc);
+    // Bigger chest counts when key drop isn't adding its own (they're short then).
+    // repaintAllDungeons runs on every settings change, so it re-checks there.
+    function bigCounts() { root.classList.toggle('stk-big', !(window.anyKeyDropFlag && window.anyKeyDropFlag())); }
+    bigCounts();
+    var _rep = window.repaintAllDungeons;
+    if (_rep) window.repaintAllDungeons = function () { var r = _rep.apply(this, arguments); bigCounts(); return r; };
+    if (window.fitWindowToContent) { window.fitWindowToContent(); setTimeout(window.fitWindowToContent, 300); }
+  }
+  if (document.readyState === 'complete') setTimeout(build, 50);
+  else window.addEventListener('load', function () { setTimeout(build, 50); });
+})();
+
 (function () {
   var q = new URLSearchParams(location.search);
   if (q.get('mobile') !== '1') return;

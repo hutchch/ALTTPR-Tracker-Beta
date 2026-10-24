@@ -1,7 +1,7 @@
 {
   "name": "hutch-alttpr-tracker",
   "productName": "Hutch-ALTTPR Tracker",
-  "version": "1.1.20.1021",
+  "version": "1.1.20.1023",
   "description": "A Link to the Past Randomizer item and map tracker with autotracking.",
   "main": "main.js",
   "scripts": {
@@ -9,7 +9,12 @@
     "dist": "electron-builder",
     "dist:win": "electron-builder --win",
     "dist:mac": "electron-builder --mac",
-    "dist:linux": "electron-builder --linux"
+    "dist:linux": "electron-builder --linux",
+    "fetch-sni": "node tools/fetch-sni.js",
+    "predist": "node tools/fetch-sni.js",
+    "predist:win": "node tools/fetch-sni.js win",
+    "predist:mac": "node tools/fetch-sni.js mac",
+    "predist:linux": "node tools/fetch-sni.js linux"
   },
   "dependencies": {
     "electron-store": "^8.2.0"
@@ -64,6 +69,13 @@
       {
         "from": "boss",
         "to": "app/boss",
+        "filter": [
+          "**/*"
+        ]
+      },
+      {
+        "from": "sni/${os}",
+        "to": "sni",
         "filter": [
           "**/*"
         ]
