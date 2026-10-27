@@ -1594,9 +1594,12 @@ function dungeonColor(key) {
       // connector — the vanilla moonpearl/flippers/titan's mitt overworld
       // route below doesn't apply. Color depends purely on (bombos or
       // firerod) + hammer + hookshot.
+      // Melting the ice: Fire Rod, or Bombos — which needs a sword to cast,
+      // except in swordless mode (Chris, Oct 2026: Bombos alone showed available).
+      var ipCanMelt = it.firerod || (it.bombos && (it.sword >= 1 || swordless));
       var isEntShuffleIP = !!(window.trackerSettings && window.trackerSettings.entranceShuffle);
       if (isEntShuffleIP) {
-        if (!it.bombos && !it.firerod) return 'red';
+        if (!ipCanMelt) return 'red';
         if (swordless && !it.hammer) return 'red';
         if (shuffleSmallKeys()) {
           var ipKeysEs = (it.ipSmallKeys) || 0;
@@ -1614,8 +1617,8 @@ function dungeonColor(key) {
       }
       // Inverted: DW is home world — no moonpearl or titans mitt needed
       if (!inverted && !it.moonpearl) return 'red';
-      // Fire source (bombos or fire rod) needed to melt ice inside IP.
-      if (!it.bombos && !it.firerod) return 'red';
+      // Fire source needed to melt ice inside IP.
+      if (!ipCanMelt) return 'red';
       // Swordless: hammer required to progress
       if (swordless && !it.hammer) return 'red';
       // Inverted 2.0 re-seals Ice Palace and moves the portal to the outer edge
@@ -9489,7 +9492,7 @@ if (document.readyState === 'loading') {
   });
 })();
 </script>
-<script src="js/mobile.js?v=27"></script>
+<script src="js/mobile.js?v=32"></script>
 <script src="js/entautotrack.js?v=1121f"></script>
 </body>
 </html>

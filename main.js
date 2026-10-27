@@ -38,8 +38,7 @@ let mapWin        = null;
 let timerWin      = null;
 let broadcastWin      = null;
 let checklistWin      = null;
-let bcastSoundsWin    = null;
-let bcastSettingsWin  = null;
+let settingsWin       = null;   // the tabbed Settings window
 let broadcastBg   = 'black';
 let timerBg       = 'black';
 let itemTrackerBg = 'black';
@@ -1193,51 +1192,52 @@ function checkForUpdates() {
   sendUpdateStatus('checking');
   fetchLatestRelease((tagName) => {
     if (!tagName) {
-      // No response — network down, API unavailable, etc. Stay quiet.
-      sendUpdateStatus('up-to-date');
+      // No response — network down, API unavailable, etc. Still look for a patch.
+      checkForPatch().then((m) => {
+        if (m) sendUpdateStatus('patch-available', { version: m.target, notes: m.notes || '' });
+        else sendUpdateStatus('up-to-date');
+      });
       return;
     }
     if (compareVersions(tagName, CURRENT_VERSION) > 0) {
       sendUpdateStatus('available', { version: tagName.replace(/^v/, ''), url: RELEASES_URL });
     } else {
-      sendUpdateStatus('up-to-date');
+      checkForPatch().then((m) => {
+        if (m) sendUpdateStatus('patch-available', { version: m.target, notes: m.notes || '' });
+        else sendUpdateStatus('up-to-date');
+      });
     }
   });
 }
 
-function openBcastSoundsWindow() {
-  if (bcastSoundsWin && !bcastSoundsWin.isDestroyed()) { bcastSoundsWin.focus(); return; }
+// One Settings window with tabs (Item Tracker / Broadcast / Item Sounds); each
+// tab is its own page, so opening on a tab just loads that page.
+const SETTINGS_PAGES = { items: 'itemtracker-settings.html', broadcast: 'bcast-settings.html', sounds: 'bcast-sounds.html' };
+function openSettingsWindow(tab) {
   const root = getRoot();
-  bcastSoundsWin = new BrowserWindow({
-    width: 480, height: 620, resizable: true, useContentSize: true,
-    title: 'Broadcast Item Sounds', backgroundColor: '#0d0d0d',
+  const file = path.join(root, SETTINGS_PAGES[tab] || SETTINGS_PAGES.items);
+  if (settingsWin && !settingsWin.isDestroyed()) {
+    settingsWin.loadFile(file);
+    settingsWin.focus();
+    return;
+  }
+  settingsWin = new BrowserWindow({
+    width: 480, height: 820, minWidth: 380, minHeight: 400, resizable: true, useContentSize: true,
+    title: 'Settings', backgroundColor: '#1a1a1a',
     webPreferences: {
       preload: path.join(root, 'preload.js'),
       contextIsolation: true, nodeIntegration: false, webSecurity: false,
     },
   });
-  bcastSoundsWin.setMenuBarVisibility(false);
-  bcastSoundsWin.loadFile(path.join(root, 'bcast-sounds.html'));
-  bcastSoundsWin.on('closed', () => { bcastSoundsWin = null; });
+  settingsWin.setMenuBarVisibility(false);
+  // Keep the window titled "Settings" whichever tab's page is showing.
+  settingsWin.on('page-title-updated', (e) => e.preventDefault());
+  settingsWin.loadFile(file);
+  settingsWin.on('closed', () => { settingsWin = null; });
 }
-ipcMain.handle('open-bcast-sounds', () => openBcastSoundsWindow());
-
-function openBcastSettingsWindow() {
-  if (bcastSettingsWin && !bcastSettingsWin.isDestroyed()) { bcastSettingsWin.focus(); return; }
-  const root = getRoot();
-  bcastSettingsWin = new BrowserWindow({
-    width: 440, height: 820, minWidth: 360, minHeight: 400, resizable: true, useContentSize: true,
-    title: 'Broadcast Settings', backgroundColor: '#1a1a1a',
-    webPreferences: {
-      preload: path.join(root, 'preload.js'),
-      contextIsolation: true, nodeIntegration: false, webSecurity: false,
-    },
-  });
-  bcastSettingsWin.setMenuBarVisibility(false);
-  bcastSettingsWin.loadFile(path.join(root, 'bcast-settings.html'));
-  bcastSettingsWin.on('closed', () => { bcastSettingsWin = null; });
-}
-ipcMain.handle('open-bcast-settings', () => openBcastSettingsWindow());
+ipcMain.handle('open-item-settings',  () => openSettingsWindow('items'));
+ipcMain.handle('open-bcast-settings', () => openSettingsWindow('broadcast'));
+ipcMain.handle('open-bcast-sounds',   () => openSettingsWindow('sounds'));
 
 ipcMain.handle('check-for-updates', () => checkForUpdates());
 // Lets the launcher render the real version instead of a hardcoded string.
@@ -1274,6 +1274,11 @@ ipcMain.handle('apply-patch', async (event) => {
   if (!patch || patch.format !== 1 || !patch.files || typeof patch.files !== 'object') {
     return { ok: false, error: 'That is not a tracker patch file.' };
   }
+  return applyPatchObject(patch, win);
+});
+
+// Shared by Apply Patch… (a file you pick) and the automatic patch download.
+async function applyPatchObject(patch, win) {
   const allNames = Object.keys(patch.files);
   const allDels  = Array.isArray(patch.delete) ? patch.delete : [];
   try { allNames.concat(allDels).forEach(patchPath); } catch (e) { return { ok: false, error: e.message }; }
@@ -1294,7 +1299,8 @@ ipcMain.handle('apply-patch', async (event) => {
     return { ok: true, count: 0, upToDate: true };
   }
 
-  if (patch.base && patch.base !== APP_VERSION) {
+  // A cumulative patch also lands on the earlier patches of its release it lists in `also`.
+  if (patch.base && patch.base !== APP_VERSION && !(Array.isArray(patch.also) && patch.also.includes(APP_VERSION))) {
     const r = await dialog.showMessageBox(win, {
       type: 'warning', buttons: ['Cancel', 'Apply anyway'], defaultId: 0, cancelId: 0,
       message: 'This patch is for version ' + patch.base + '.',
@@ -1363,6 +1369,84 @@ ipcMain.handle('apply-patch', async (event) => {
   });
   if (r.response === 0) { app.relaunch(); app.exit(0); }
   return { ok: true, count: names.length, target: patch.target || '' };
+}
+
+// ── Automatic patches ────────────────────────────────────────────────────────
+// A patch repo on GitHub holds latest.json and the .trkpatch it names
+// (tools/make-patch.js writes both — see Readme_Files/AUTO-PATCH-README.md).
+// The tracker reads latest.json on launch and on Check for Updates; when it is
+// for exactly this version and newer, the launcher offers Install. Every patch
+// must carry an Ed25519 signature that checks out against patch-public-key.pem
+// shipped with the app; without that key, or with a bad signature, nothing is
+// installed (Chris, Oct 2026).
+const PATCH_REPO         = 'hutchch/ALTTPR-Tracker-Patches';
+const PATCH_MANIFEST_URL = 'https://raw.githubusercontent.com/' + PATCH_REPO + '/main/latest.json';
+// Where a patch may be downloaded from: the repo's files, or its releases.
+const PATCH_URL_PREFIXES = ['https://raw.githubusercontent.com/' + PATCH_REPO + '/',
+                            'https://github.com/' + PATCH_REPO + '/releases/download/'];
+let availablePatch = null;
+
+function fetchBuffer(url, maxBytes, hops) {
+  return new Promise((resolve, reject) => {
+    const req = https.get(url, { headers: { 'User-Agent': 'ALTTPR-Tracker-Updater' }, timeout: 15000 }, (res) => {
+      // A release download redirects to GitHub's file host; the signature check is what vouches for it.
+      if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location && (hops || 0) < 3) {
+        res.resume(); resolve(fetchBuffer(res.headers.location, maxBytes, (hops || 0) + 1)); return;
+      }
+      if (res.statusCode !== 200) { res.resume(); reject(new Error('HTTP ' + res.statusCode)); return; }
+      const chunks = []; let size = 0;
+      res.on('data', (c) => { size += c.length; if (size > maxBytes) { req.destroy(); reject(new Error('too large')); } else chunks.push(c); });
+      res.on('end', () => resolve(Buffer.concat(chunks)));
+    });
+    req.on('error', reject);
+    req.on('timeout', () => { req.destroy(); reject(new Error('timed out')); });
+  });
+}
+
+function patchPublicKey() {
+  try { return crypto.createPublicKey(fs.readFileSync(path.join(PATCH_ROOT, 'patch-public-key.pem'))); }
+  catch (e) { return null; }
+}
+
+// Resolves to the manifest when there is a patch for this exact version, else null.
+async function checkForPatch() {
+  availablePatch = null;
+  let m;
+  try { m = JSON.parse((await fetchBuffer(PATCH_MANIFEST_URL + '?t=' + Date.now(), 64 * 1024)).toString('utf8')); }
+  catch (e) { return null; }   // no repo yet, offline, … — stay quiet
+  const fromHere = m && (m.base === APP_VERSION || (Array.isArray(m.also) && m.also.includes(APP_VERSION)));
+  if (!m || m.format !== 1 || !fromHere || !m.target || compareVersions(m.target, APP_VERSION) <= 0) return null;
+  if (typeof m.url !== 'string' || !PATCH_URL_PREFIXES.some((p) => m.url.indexOf(p) === 0)) return null;   // only from the patch repo
+  if (!/^[0-9a-f]{64}$/.test(m.sha256 || '') || typeof m.sig !== 'string') return null;
+  availablePatch = m;
+  return m;
+}
+
+ipcMain.handle('install-patch', async (event) => {
+  const win = BrowserWindow.fromWebContents(event.sender);
+  const m = availablePatch || await checkForPatch();
+  if (!m) return { ok: false, error: 'No patch is available for version ' + APP_VERSION + '.' };
+  const key = patchPublicKey();
+  if (!key) return { ok: false, error: 'This build has no patch key (patch-public-key.pem), so it cannot check a patch is genuine.' };
+  let buf;
+  try { buf = await fetchBuffer(m.url, 200 * 1024 * 1024); }
+  catch (e) { return { ok: false, error: 'Could not download the patch: ' + e.message }; }
+  if (crypto.createHash('sha256').update(buf).digest('hex') !== m.sha256) {
+    return { ok: false, error: 'The downloaded patch is damaged (checksum mismatch). Nothing was changed.' };
+  }
+  let good = false;
+  try { good = crypto.verify(null, buf, key, Buffer.from(m.sig, 'base64')); } catch (e) {}
+  if (!good) return { ok: false, error: 'The patch is not signed with this tracker\'s key. Nothing was changed.' };
+  let patch;
+  try { patch = JSON.parse(buf.toString('utf8')); } catch (e) { patch = null; }
+  if (!patch || patch.format !== 1 || !patch.files || typeof patch.files !== 'object' || patch.target !== m.target) {
+    return { ok: false, error: 'The patch file does not match its listing. Nothing was changed.' };
+  }
+  // latest.json isn't signed, so the versions it may land on are checked against the signed patch.
+  if (patch.base !== APP_VERSION && !(Array.isArray(patch.also) && patch.also.includes(APP_VERSION))) {
+    return { ok: false, error: 'This patch is not for version ' + APP_VERSION + '. Nothing was changed.' };
+  }
+  return applyPatchObject(patch, win);
 });
 
 ipcMain.handle('open-external', (event, url) => {
@@ -1401,6 +1485,7 @@ ipcMain.handle('register-newgame-hotkey', (event, accelerator) => {
   }
 });
 
+ipcMain.handle('get-newgame-hotkey', () => newgameHotkey);
 ipcMain.handle('unregister-newgame-hotkey', () => {
   if (newgameHotkey) {
     globalShortcut.unregister(newgameHotkey);
@@ -1441,6 +1526,20 @@ ipcMain.handle('load-ent-state', async () => {
 const net = require('net');
 const { spawn } = require('child_process');
 let sniChild = null;
+let sniAdopted = null;   // pid of our SNI left running by a session that didn't quit cleanly
+
+// Is this pid alive, and is it SNI? (A saved pid can be reused by anything.)
+function isSniPid(pid) {
+  if (!pid) return false;
+  try { process.kill(pid, 0); } catch (e) { return false; }
+  try {
+    const { execFileSync } = require('child_process');
+    const out = process.platform === 'win32'
+      ? execFileSync('tasklist', ['/FI', 'PID eq ' + pid, '/FO', 'CSV', '/NH'], { encoding: 'utf8', windowsHide: true })
+      : execFileSync('ps', ['-p', String(pid), '-o', 'comm='], { encoding: 'utf8' });
+    return process.platform === 'win32' ? /"sni\.exe"/i.test(out) : path.basename(out.trim()) === 'sni';
+  } catch (e) { return false; }
+}
 
 function sniDir() {
   const os = process.platform === 'win32' ? 'win' : process.platform === 'darwin' ? 'mac' : 'linux';
@@ -1464,35 +1563,47 @@ async function startSni() {
   if (sniChild || !sniAutoStart()) return;
   const exe = sniExe();
   if (!fs.existsSync(exe)) { console.log('[sni] not bundled:', exe); return; }
-  if (await portInUse(23074)) { console.log('[sni] 23074 already in use — leaving the running one alone'); return; }
+  if (await portInUse(23074)) {
+    // Ours from a session that crashed or was force-quit: take it back, so
+    // quitting this time closes it (Chris, Oct 2026). Anyone else's is left alone.
+    const pid = store.get('sniPid', null);
+    if (isSniPid(pid)) { sniAdopted = pid; console.log('[sni] adopted our earlier SNI, pid', pid); }
+    else console.log('[sni] 23074 already in use — leaving the running one alone');
+    return;
+  }
   try { if (process.platform !== 'win32') fs.chmodSync(exe, 0o755); } catch (e) {}
   try {
     sniChild = spawn(exe, [], { cwd: sniDir(), stdio: 'ignore', windowsHide: true });
-    sniChild.on('exit', (code) => { console.log('[sni] exited', code); sniChild = null; });
+    store.set('sniPid', sniChild.pid);
+    sniChild.on('exit', (code) => { console.log('[sni] exited', code); sniChild = null; store.delete('sniPid'); });
     sniChild.on('error', (e) => { console.warn('[sni] failed to start:', e.message); sniChild = null; });
     console.log('[sni] started', exe);
   } catch (e) { console.warn('[sni] failed to start:', e.message); sniChild = null; }
 }
 function stopSni() {
-  if (!sniChild) return;
-  try { sniChild.kill(); } catch (e) {}
-  sniChild = null;
+  if (sniChild) { try { sniChild.kill(); } catch (e) {} }
+  else if (sniAdopted) { try { process.kill(sniAdopted); } catch (e) {} }
+  if (sniChild || sniAdopted) store.delete('sniPid');
+  sniChild = null; sniAdopted = null;
 }
 
 ipcMain.handle('sni-status', async () => ({
   autoStart: sniAutoStart(),
   bundled:   fs.existsSync(sniExe()),
-  ours:      !!sniChild,
+  ours:      !!(sniChild || sniAdopted),
   listening: await portInUse(23074),
 }));
 ipcMain.handle('sni-set-autostart', async (_e, on) => {
   store.set('sniAutoStart', !!on);
   if (on) await startSni(); else stopSni();
-  return { autoStart: sniAutoStart(), ours: !!sniChild };
+  return { autoStart: sniAutoStart(), ours: !!(sniChild || sniAdopted) };
 });
 
 // Clean up on quit
 app.on('will-quit', () => { globalShortcut.unregisterAll(); stopSni(); });
+// Belt and braces: Ctrl+C on `npm start`, or a quit path that skips will-quit.
+process.on('exit', stopSni);
+['SIGINT', 'SIGTERM'].forEach((sig) => process.on(sig, () => { stopSni(); app.quit(); }));
 
 // ── Plugin host ───────────────────────────────────────────────────────────────
 // Optional drop-in plugins live in <appRoot>/plugins/<name>/ with a plugin.json

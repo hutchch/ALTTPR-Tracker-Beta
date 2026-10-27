@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <title>ALTTP Item Tracker</title>
 <meta http-equiv="Content-Security-Policy" content="connect-src * ws://*:*;">
-<link rel="stylesheet" href="items.css?v=1139a">
+<link rel="stylesheet" href="items.css?v=1141a">
 </head>
 <body>
 
@@ -14,8 +14,8 @@
   <div class="size-group">
     <button class="size-btn" onclick="changeTrackerScale(-0.05)">&#8722;</button>
     <button class="size-btn" onclick="changeTrackerScale(0.05)">+</button>
-    <button class="item-settings-btn" id="item-settings-btn" title="Settings" onclick="openItemSettings()">⚙</button>
-<button class="size-btn" id="item-broadcast-btn" title="Open Broadcast View" onclick="(function(){ var bg=localStorage.getItem('alttp-tracker-bg')||'black'; if(window.electronAPI&&window.electronAPI.launch){ window.electronAPI.launch({which:'broadcast',trackerBg:bg}); } else { window.open('broadcast.html?bg='+bg,'alttp-broadcast','width=500,height=230,resizable=yes'); } })()" style="background:#1a2e4a;color:#7ab8f5;border:1px solid #2a4e7a;padding:0 6px;">📡</button>
+    <button class="item-settings-btn" id="item-settings-btn" title="Settings" onclick="openItemSettings()">⚙&#xFE0E; Settings</button>
+<button class="item-settings-btn" id="item-broadcast-btn" title="Open Broadcast View" onclick="(function(){ var bg=localStorage.getItem('alttp-tracker-bg')||'black'; if(window.electronAPI&&window.electronAPI.launch){ window.electronAPI.launch({which:'broadcast',trackerBg:bg}); } else { window.open('broadcast.html?bg='+bg,'alttp-broadcast','width=500,height=230,resizable=yes'); } })()" style="background:#1a2e4a;color:#7ab8f5;border:1px solid #2a4e7a;">📡 Broadcast</button>
   </div>
   <div class="connection-status" id="item-conn-status">○ Disconnected</div>
   <span class="race-label" id="item-race-label"></span>
@@ -24,140 +24,6 @@
   <button class="newgame-btn" id="item-newgame-btn" title="Reset to new game" onclick="resetItemTracker()">⟳ New Game</button>
 </div>
 
-<div id="item-settings-overlay" class="hidden" onclick="if(event.target===this)closeItemSettings()">
-  <div class="its-modal">
-    <div class="its-header">
-      <h3>Tracker Settings</h3>
-      <button class="its-close" onclick="closeItemSettings()">×</button>
-    </div>
-    <div class="its-body">
-      <div class="its-section">
-        <h4>Layout</h4>
-        <div class="its-radios">
-          <label><input type="radio" name="its-layout" value="standard"> View-1</label>
-          <label><input type="radio" name="its-layout" value="stacked"> View-2</label>
-        </div>
-      </div>
-
-      <div class="its-section">
-        <h4>Main Background</h4>
-        <div class="its-radios">
-          <label><input type="radio" name="its-bg" value="black"> Black</label>
-          <label><input type="radio" name="its-bg" value="grey"> Grey</label>
-          <label><input type="radio" name="its-bg" value="white"> White</label>
-          <label><input type="radio" name="its-bg" value="transparent"> Transparent</label>
-          <label><input type="radio" name="its-bg" value="image"> Image</label>
-        </div>
-        <div class="its-row">
-          <label class="its-file-btn">
-            Choose Image...
-            <input type="file" accept="image/*" id="item-bg-image-file" style="display:none;">
-          </label>
-          <button type="button" class="its-file-btn" id="item-bg-image-clear">Clear</button>
-          <span class="its-sub-label" id="item-bg-image-status">No image</span>
-        </div>
-      </div>
-
-      <div class="its-section">
-        <h4>Item Background</h4>
-        <div class="its-row">
-          <label><input type="checkbox" id="item-opt-fill-enabled"> Item Fill</label>
-        </div>
-        <div class="its-sub" id="item-fill-sub">
-          <div class="its-sub-label">Fill Color (top-right)</div>
-          <div class="its-radios">
-            <label><input type="radio" name="its-fill-color" value="green"> Green</label>
-            <label><input type="radio" name="its-fill-color" value="blue"> Blue</label>
-            <label><input type="radio" name="its-fill-color" value="purple"> Purple</label>
-            <label><input type="radio" name="its-fill-color" value="custom"> Custom</label>
-            <input type="color" class="its-color-picker" id="item-opt-fill-custom" value="#00aa00">
-          </div>
-          <div class="its-sub-label">Second Color (bottom-left)</div>
-          <div class="its-radios">
-            <label><input type="radio" name="its-fill-color-2" value="green"> Green</label>
-            <label><input type="radio" name="its-fill-color-2" value="blue"> Blue</label>
-            <label><input type="radio" name="its-fill-color-2" value="purple"> Purple</label>
-            <label><input type="radio" name="its-fill-color-2" value="custom"> Custom</label>
-            <input type="color" class="its-color-picker" id="item-opt-fill-custom-2" value="#b675ff">
-          </div>
-          <div class="its-sub-label">Fill Effect</div>
-          <div class="its-radios">
-            <label><input type="radio" name="its-fill-effect" value="none"> No Effects</label>
-            <label><input type="radio" name="its-fill-effect" value="falling"> Falling</label>
-            <label><input type="radio" name="its-fill-effect" value="starburst"> Starburst</label>
-            <label><input type="radio" name="its-fill-effect" value="pulse"> Pulse</label>
-          </div>
-        </div>
-      </div>
-
-      <div class="its-section">
-        <h4>New Game Hotkey</h4>
-        <div class="its-row">
-          <label><input type="checkbox" id="item-hotkey-enabled"> Enable global hotkey</label>
-        </div>
-        <div class="its-sub" id="item-hotkey-sub">
-          <div class="its-sub-label">Press the key combination to assign it. Off on relaunch.</div>
-          <div class="its-row" style="gap:8px;align-items:center;">
-            <div id="item-hotkey-display" style="
-              padding:4px 10px; border-radius:4px; border:1px solid #555;
-              background:#1a1a1a; color:#fff; font-family:monospace; font-size:13px;
-              min-width:80px; text-align:center; cursor:pointer; user-select:none;
-            ">\</div>
-            <button type="button" class="its-file-btn" id="item-hotkey-record-btn">Record Key</button>
-            <button type="button" class="its-file-btn" id="item-hotkey-reset-btn">Reset</button>
-          </div>
-          <div id="item-hotkey-status" style="font-size:10px;color:#888;margin-top:4px;"></div>
-        </div>
-      </div>
-
-      <div class="its-section">
-        <h4>Dungeon Background</h4>
-        <div class="its-row">
-          <label><input type="checkbox" id="item-opt-dungeon-fill"> Dungeon Fill</label>
-          <label><input type="checkbox" id="item-opt-dungeon-box"> Dungeon Box</label>
-          <label><input type="checkbox" id="item-opt-show-boss"> Show Boss</label>
-        </div>
-        <div class="its-row" style="margin-top:6px;">
-          <label><input type="checkbox" id="item-opt-dungeon-chests"> Show Dungeon Chests</label>
-        </div>
-        <div class="its-sub-label">All Chests Collected</div>
-        <div class="its-radios">
-          <label><input type="radio" name="its-chests-color" value="blue"> Blue</label>
-          <label><input type="radio" name="its-chests-color" value="green"> Green</label>
-          <label><input type="radio" name="its-chests-color" value="purple"> Purple</label>
-          <label><input type="radio" name="its-chests-color" value="yellow"> Yellow</label>
-          <label><input type="radio" name="its-chests-color" value="custom"> Custom</label>
-          <input type="color" class="its-color-picker" id="item-opt-chests-custom" value="#5a8eff">
-        </div>
-        <div class="its-sub-label">Dungeon Complete</div>
-        <div class="its-radios">
-          <label><input type="radio" name="its-complete-color" value="green"> Green</label>
-          <label><input type="radio" name="its-complete-color" value="blue"> Blue</label>
-          <label><input type="radio" name="its-complete-color" value="purple"> Purple</label>
-          <label><input type="radio" name="its-complete-color" value="yellow"> Yellow</label>
-          <label><input type="radio" name="its-complete-color" value="custom"> Custom</label>
-          <input type="color" class="its-color-picker" id="item-opt-complete-custom" value="#4dff88">
-        </div>
-        <div class="its-sub-label">Default Dungeon Prize</div>
-        <div class="its-radios">
-          <label><input type="radio" name="its-default-prize" value="crystal"> Crystal</label>
-          <label><input type="radio" name="its-default-prize" value="unknown"> Unknown (?)</label>
-        </div>
-      </div>
-
-      <div class="its-section">
-        <h4>Checks Number</h4>
-        <div class="its-radios">
-          <label><input type="radio" name="its-checks-color" value="white"> White</label>
-          <label><input type="radio" name="its-checks-color" value="black"> Black</label>
-          <label><input type="radio" name="its-checks-color" value="grey"> Grey</label>
-          <label><input type="radio" name="its-checks-color" value="custom"> Custom</label>
-          <input type="color" class="its-color-picker" id="item-opt-checks-custom" value="#ffffff">
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
 
 <script src="js/dngpanel.js?v=1131a"></script>
 <script>
@@ -186,7 +52,9 @@ window.ensurePotLocations = function() {
   });
 })();
 </script>
+<script src="js/item-settings.js?v=2"></script>
 <script src="js/items.js?v=1136a"></script>
+<script src="js/item-sounds.js?v=1"></script>
 <script>
 // ── Dungeon hover panel (js/dngpanel.js, shared with the map) ─────────────────
 // The item tracker knows the real dungeon state — counts, map/compass/big key,
@@ -595,192 +463,6 @@ window.cycleMedallionLabel = function(itemKey, slot) {
   if (window.broadcastItemSnap) window.broadcastItemSnap();
 };
 
-// ════════════════════════════════════════════════════════════════════════════
-// Settings customization — Main Background / Item Background / Dungeon
-// Background. Ported from the Broadcast View's settings popup.
-// ════════════════════════════════════════════════════════════════════════════
-var ITEM_SETTINGS = {
-  bg:            'black',     // black | grey | white | transparent | image
-  bgImage:       '',          // data: URL of an uploaded background image
-  fillEnabled:   false,
-  fillColor:     'green',     // green | blue | purple | custom (top-right of diagonal)
-  fillCustom:    '#00aa00',
-  fillColor2:    'purple',    // green | blue | purple | custom (bottom-left of diagonal)
-  fillCustom2:   '#b675ff',
-  fillEffect:    'none',      // none | falling | starburst | pulse
-  chestsColor:   'blue',      // blue | green | purple | yellow | custom
-  chestsCustom:  '#5a8eff',
-  completeColor: 'green',     // blue | green | purple | yellow | custom
-  completeCustom:'#4dff88',
-  dungeonFillEnabled: true,   // completion tints shown when true
-  dungeonBoxEnabled:  true,   // dark slot container shown when true
-  showBoss:           true,   // false = hide all boss circles (vanilla bosses)
-  dungeonChests:      false,  // hover card's per-chest list; off by default
-  defaultPrize:  'crystal',   // crystal | unknown — starting dungeon prize
-  checksColor:   'white',     // white | black | grey | custom (CHECKS number)
-  checksCustom:  '#ffffff'
-};
-var ITEM_FILL_COLORS      = { green:'#2ecc71', blue:'#3498db', purple:'#b675ff' };
-var ITEM_FILL_COLORS_DARK = { green:'#176b3b', blue:'#1c5478', purple:'#5e3d99' };
-var ITEM_DUNGEON_PRESETS = { blue:'#5a8eff', green:'#4dff88', purple:'#b675ff', yellow:'#ffcc44' };
-var CHECKS_COLOR_PRESETS = { white:'#ffffff', black:'#000000', grey:'#888888' };
-
-function loadItemSettings() {
-  try {
-    // bg reuses the launcher's key so the two stay in sync
-    ITEM_SETTINGS.bg             = localStorage.getItem('alttp-tracker-bg') || 'black';
-    // Follows the seed's Dungeon Item Shuffle setting. Session-only — never
-    // read from or written to storage, so each launch starts fresh.
-    ITEM_SETTINGS.defaultPrize   = (window.defaultPrizeSetting ? window.defaultPrizeSetting()
-                                   : ITEM_SETTINGS.defaultPrize);
-    ITEM_SETTINGS.bgImage        = localStorage.getItem('alttp-itemtracker-bg-image') || '';
-    ITEM_SETTINGS.fillEnabled    = localStorage.getItem('alttp-itemtracker-fill-enabled') === 'true';
-    ITEM_SETTINGS.fillColor      = localStorage.getItem('alttp-itemtracker-fill-color')   || ITEM_SETTINGS.fillColor;
-    ITEM_SETTINGS.fillCustom     = localStorage.getItem('alttp-itemtracker-fill-custom')  || ITEM_SETTINGS.fillCustom;
-    ITEM_SETTINGS.fillColor2     = localStorage.getItem('alttp-itemtracker-fill-color-2')  || ITEM_SETTINGS.fillColor2;
-    ITEM_SETTINGS.fillCustom2    = localStorage.getItem('alttp-itemtracker-fill-custom-2') || ITEM_SETTINGS.fillCustom2;
-    ITEM_SETTINGS.fillEffect     = localStorage.getItem('alttp-itemtracker-fill-effect')  || ITEM_SETTINGS.fillEffect;
-    ITEM_SETTINGS.chestsColor    = localStorage.getItem('alttp-itemtracker-chests-color') || ITEM_SETTINGS.chestsColor;
-    ITEM_SETTINGS.chestsCustom   = localStorage.getItem('alttp-itemtracker-chests-custom')|| ITEM_SETTINGS.chestsCustom;
-    ITEM_SETTINGS.completeColor  = localStorage.getItem('alttp-itemtracker-complete-color') || ITEM_SETTINGS.completeColor;
-    ITEM_SETTINGS.completeCustom = localStorage.getItem('alttp-itemtracker-complete-custom')|| ITEM_SETTINGS.completeCustom;
-    ITEM_SETTINGS.checksColor    = localStorage.getItem('alttp-itemtracker-checks-color')  || ITEM_SETTINGS.checksColor;
-    ITEM_SETTINGS.checksCustom   = localStorage.getItem('alttp-itemtracker-checks-custom') || ITEM_SETTINGS.checksCustom;
-    ITEM_SETTINGS.dungeonFillEnabled = localStorage.getItem('alttp-itemtracker-dungeon-fill') !== 'false';
-    ITEM_SETTINGS.dungeonBoxEnabled  = localStorage.getItem('alttp-itemtracker-dungeon-box')  !== 'false';
-    ITEM_SETTINGS.dungeonChests      = localStorage.getItem('alttp-itemtracker-dungeon-chests') === 'true';
-    // Show Boss: on unless the user turned it off here. It is deliberately NOT
-    // tied to the bossshuffle URL param any more — with boss shuffle off the
-    // circles still show the vanilla bosses, which is worth seeing, and the
-    // launcher passing bossshuffle=no was switching this off on every launch.
-    // One-time repair: a build that briefly defaulted this off wrote 'false'
-    // into the key, so the old value is discarded once.
-    // (v3: the same stale 'false' turned up again on profiles that had already
-    // been through the v2 repair, so it is discarded once more.)
-    if (localStorage.getItem('alttp-itemtracker-show-boss-v3') !== '1') {
-      localStorage.removeItem('alttp-itemtracker-show-boss');
-      localStorage.setItem('alttp-itemtracker-show-boss-v3', '1');
-    }
-    var _stored = localStorage.getItem('alttp-itemtracker-show-boss');
-    if (_stored !== null) ITEM_SETTINGS.showBoss = _stored !== 'false';
-  } catch (e) {}
-  // URL bg (from the launcher / a transparent-toggle recreate) wins
-  var urlBg = new URLSearchParams(window.location.search).get('bg');
-  if (urlBg) ITEM_SETTINGS.bg = urlBg;
-  if (ITEM_SETTINGS.bg === 'image' && !ITEM_SETTINGS.bgImage) ITEM_SETTINGS.bg = 'black';
-}
-
-function saveItemSettings() {
-  try {
-    localStorage.setItem('alttp-tracker-bg', ITEM_SETTINGS.bg);
-    localStorage.setItem('alttp-itemtracker-fill-enabled',   ITEM_SETTINGS.fillEnabled ? 'true' : 'false');
-    localStorage.setItem('alttp-itemtracker-fill-color',     ITEM_SETTINGS.fillColor);
-    localStorage.setItem('alttp-itemtracker-fill-custom',    ITEM_SETTINGS.fillCustom);
-    localStorage.setItem('alttp-itemtracker-fill-color-2',   ITEM_SETTINGS.fillColor2);
-    localStorage.setItem('alttp-itemtracker-fill-custom-2',  ITEM_SETTINGS.fillCustom2);
-    localStorage.setItem('alttp-itemtracker-fill-effect',    ITEM_SETTINGS.fillEffect);
-    localStorage.setItem('alttp-itemtracker-chests-color',   ITEM_SETTINGS.chestsColor);
-    localStorage.setItem('alttp-itemtracker-chests-custom',  ITEM_SETTINGS.chestsCustom);
-    localStorage.setItem('alttp-itemtracker-complete-color', ITEM_SETTINGS.completeColor);
-    localStorage.setItem('alttp-itemtracker-complete-custom',ITEM_SETTINGS.completeCustom);
-    localStorage.setItem('alttp-itemtracker-checks-color',   ITEM_SETTINGS.checksColor);
-    localStorage.setItem('alttp-itemtracker-checks-custom',  ITEM_SETTINGS.checksCustom);
-    localStorage.setItem('alttp-itemtracker-dungeon-fill',   ITEM_SETTINGS.dungeonFillEnabled ? 'true' : 'false');
-    localStorage.setItem('alttp-itemtracker-dungeon-box',    ITEM_SETTINGS.dungeonBoxEnabled  ? 'true' : 'false');
-    localStorage.setItem('alttp-itemtracker-show-boss',      ITEM_SETTINGS.showBoss            ? 'true' : 'false');
-    localStorage.setItem('alttp-itemtracker-dungeon-chests', ITEM_SETTINGS.dungeonChests     ? 'true' : 'false');
-  } catch (e) {}
-}
-
-// Show / hide every boss circle. Driven by html.no-boss-shuffle, same class
-// the launcher's "Boss Shuffle = No" early IIFE sets, so both paths share CSS.
-function applyShowBoss() {
-  // hide-boss, NOT no-boss-shuffle: that class belongs to the boss-shuffle
-  // setting and only locks the circles (pointer-events: none), so toggling it
-  // here left the circles on screen and the checkbox looked dead.
-  document.documentElement.classList.toggle('hide-boss', !ITEM_SETTINGS.showBoss);
-}
-
-function saveItemBgImage(dataUrl) {
-  ITEM_SETTINGS.bgImage = dataUrl || '';
-  try {
-    if (dataUrl) localStorage.setItem('alttp-itemtracker-bg-image', dataUrl);
-    else         localStorage.removeItem('alttp-itemtracker-bg-image');
-    return true;
-  } catch (e) {
-    alert('Could not store background image — it may be too large. Try a smaller file.');
-    ITEM_SETTINGS.bgImage = '';
-    return false;
-  }
-}
-
-function applyItemFillVariable() {
-  var c = ITEM_SETTINGS.fillColor === 'custom'
-    ? ITEM_SETTINGS.fillCustom
-    : (ITEM_FILL_COLORS[ITEM_SETTINGS.fillColor] || ITEM_FILL_COLORS.green);
-  var c2 = ITEM_SETTINGS.fillColor2 === 'custom'
-    ? ITEM_SETTINGS.fillCustom2
-    : (ITEM_FILL_COLORS_DARK[ITEM_SETTINGS.fillColor2] || ITEM_FILL_COLORS_DARK.purple);
-  document.documentElement.style.setProperty('--item-fill-color', c);
-  document.documentElement.style.setProperty('--item-fill-color2', c2);
-}
-
-function applyChecksColor() {
-  var col = ITEM_SETTINGS.checksColor === 'custom'
-    ? ITEM_SETTINGS.checksCustom
-    : (CHECKS_COLOR_PRESETS[ITEM_SETTINGS.checksColor] || CHECKS_COLOR_PRESETS.white);
-  document.documentElement.style.setProperty('--check-num-color', col);
-}
-
-function applyItemDungeonColors() {
-  var chests = ITEM_SETTINGS.chestsColor === 'custom'
-    ? ITEM_SETTINGS.chestsCustom
-    : (ITEM_DUNGEON_PRESETS[ITEM_SETTINGS.chestsColor] || ITEM_DUNGEON_PRESETS.blue);
-  var complete = ITEM_SETTINGS.completeColor === 'custom'
-    ? ITEM_SETTINGS.completeCustom
-    : (ITEM_DUNGEON_PRESETS[ITEM_SETTINGS.completeColor] || ITEM_DUNGEON_PRESETS.green);
-  document.documentElement.style.setProperty('--chests-color',   chests);
-  document.documentElement.style.setProperty('--complete-color', complete);
-}
-
-// Completion tints only apply while <html> carries .dfill-on.
-function applyItemDungeonFill() {
-  document.documentElement.classList.toggle('dfill-on', !!ITEM_SETTINGS.dungeonFillEnabled);
-}
-
-// Toggle the default dark container on every dungeon slot.
-function applyItemDungeonBox() {
-  document.querySelectorAll('.dungeon-slot').forEach(function(slot) {
-    slot.classList.toggle('no-box', !ITEM_SETTINGS.dungeonBoxEnabled);
-  });
-}
-
-function applyItemBg(bg) {
-  // "image" with nothing stored — prompt for a file instead of switching.
-  if (bg === 'image' && !ITEM_SETTINGS.bgImage) {
-    var picker = document.getElementById('item-bg-image-file');
-    if (picker) picker.click();
-    document.querySelectorAll('input[name="its-bg"]').forEach(function(r){ r.checked = (r.value === ITEM_SETTINGS.bg); });
-    return;
-  }
-  ITEM_SETTINGS.bg = bg;
-  saveItemSettings();
-  if (bg === 'black') document.documentElement.removeAttribute('data-bg');
-  else                document.documentElement.setAttribute('data-bg', bg);
-  if (bg === 'image') {
-    document.documentElement.style.setProperty('--bg-image', ITEM_SETTINGS.bgImage ? 'url("' + ITEM_SETTINGS.bgImage + '")' : 'none');
-  }
-  // Transparent <-> opaque needs a window recreate (Electron limitation) —
-  // main.js handles that in the set-itemtracker-bg IPC handler.
-  if (window.electronAPI && window.electronAPI.setItemTrackerBg) window.electronAPI.setItemTrackerBg(bg);
-}
-
-function updateItemBgImageStatus() {
-  var lbl = document.getElementById('item-bg-image-status');
-  if (lbl) lbl.textContent = ITEM_SETTINGS.bgImage ? 'Image loaded' : 'No image';
-}
-
-// Add/remove .filled (+ the chosen effect class) on one slot. Only acts on a
 // transition so the effect animation doesn't replay on every refresh.
 function applyOneItemFill(el, isFilled) {
   if (!el) return;
@@ -837,196 +519,8 @@ function refreshItemFills() {
 }
 window.refreshItemFills = refreshItemFills;
 
-// ── Settings popup ───────────────────────────────────────────────────────────
-function openItemSettings() {
-  document.querySelectorAll('input[name="its-bg"]').forEach(function(r){ r.checked = (r.value === ITEM_SETTINGS.bg); });
-  document.getElementById('item-opt-fill-enabled').checked = ITEM_SETTINGS.fillEnabled;
-  document.querySelectorAll('input[name="its-fill-color"]').forEach(function(r){ r.checked = (r.value === ITEM_SETTINGS.fillColor); });
-  document.querySelectorAll('input[name="its-fill-color-2"]').forEach(function(r){ r.checked = (r.value === ITEM_SETTINGS.fillColor2); });
-  document.querySelectorAll('input[name="its-fill-effect"]').forEach(function(r){ r.checked = (r.value === ITEM_SETTINGS.fillEffect); });
-  document.getElementById('item-opt-fill-custom').value = ITEM_SETTINGS.fillCustom;
-  document.getElementById('item-opt-fill-custom-2').value = ITEM_SETTINGS.fillCustom2;
-  document.querySelectorAll('input[name="its-chests-color"]').forEach(function(r){ r.checked = (r.value === ITEM_SETTINGS.chestsColor); });
-  document.getElementById('item-opt-chests-custom').value = ITEM_SETTINGS.chestsCustom;
-  document.querySelectorAll('input[name="its-complete-color"]').forEach(function(r){ r.checked = (r.value === ITEM_SETTINGS.completeColor); });
-  document.getElementById('item-opt-complete-custom').value = ITEM_SETTINGS.completeCustom;
-  var _dpNow = (window.defaultPrizeSetting ? window.defaultPrizeSetting() : ITEM_SETTINGS.defaultPrize);
-  ITEM_SETTINGS.defaultPrize = _dpNow;
-  document.querySelectorAll('input[name="its-default-prize"]').forEach(function(r){ r.checked = (r.value === _dpNow); });
-  document.querySelectorAll('input[name="its-checks-color"]').forEach(function(r){ r.checked = (r.value === ITEM_SETTINGS.checksColor); });
-  document.getElementById('item-opt-checks-custom').value = ITEM_SETTINGS.checksCustom;
-  document.getElementById('item-opt-dungeon-fill').checked = ITEM_SETTINGS.dungeonFillEnabled;
-  document.getElementById('item-opt-dungeon-box').checked  = ITEM_SETTINGS.dungeonBoxEnabled;
-  document.getElementById('item-opt-show-boss').checked    = ITEM_SETTINGS.showBoss;
-  document.getElementById('item-opt-dungeon-chests').checked = ITEM_SETTINGS.dungeonChests;
-  syncItemFillSub();
-  updateItemBgImageStatus();
-  document.getElementById('item-settings-overlay').classList.remove('hidden');
-}
-function closeItemSettings() {
-  document.getElementById('item-settings-overlay').classList.add('hidden');
-}
-function syncItemFillSub() {
-  var sub = document.getElementById('item-fill-sub');
-  if (!sub) return;
-  if (ITEM_SETTINGS.fillEnabled) sub.classList.remove('disabled');
-  else                          sub.classList.add('disabled');
-}
-
-function wireItemSettingsHandlers() {
-  document.querySelectorAll('input[name="its-bg"]').forEach(function(r) {
-    r.addEventListener('change', function() { if (r.checked) applyItemBg(r.value); });
-  });
-  document.getElementById('item-opt-fill-enabled').addEventListener('change', function(e) {
-    ITEM_SETTINGS.fillEnabled = e.target.checked;
-    saveItemSettings(); syncItemFillSub(); refreshItemFills();
-  });
-  document.querySelectorAll('input[name="its-fill-color"]').forEach(function(r) {
-    r.addEventListener('change', function() {
-      if (!r.checked) return;
-      ITEM_SETTINGS.fillColor = r.value;
-      saveItemSettings(); applyItemFillVariable();
-    });
-  });
-  document.getElementById('item-opt-fill-custom').addEventListener('input', function(e) {
-    ITEM_SETTINGS.fillCustom = e.target.value;
-    if (ITEM_SETTINGS.fillColor === 'custom') applyItemFillVariable();
-    saveItemSettings();
-  });
-  document.querySelectorAll('input[name="its-fill-color-2"]').forEach(function(r) {
-    r.addEventListener('change', function() {
-      if (!r.checked) return;
-      ITEM_SETTINGS.fillColor2 = r.value;
-      saveItemSettings(); applyItemFillVariable();
-    });
-  });
-  document.getElementById('item-opt-fill-custom-2').addEventListener('input', function(e) {
-    ITEM_SETTINGS.fillCustom2 = e.target.value;
-    if (ITEM_SETTINGS.fillColor2 === 'custom') applyItemFillVariable();
-    saveItemSettings();
-  });
-  document.querySelectorAll('input[name="its-fill-effect"]').forEach(function(r) {
-    r.addEventListener('change', function() {
-      if (!r.checked) return;
-      ITEM_SETTINGS.fillEffect = r.value;
-      saveItemSettings();
-    });
-  });
-  document.querySelectorAll('input[name="its-chests-color"]').forEach(function(r) {
-    r.addEventListener('change', function() {
-      if (!r.checked) return;
-      ITEM_SETTINGS.chestsColor = r.value;
-      saveItemSettings(); applyItemDungeonColors();
-    });
-  });
-  document.getElementById('item-opt-chests-custom').addEventListener('input', function(e) {
-    ITEM_SETTINGS.chestsCustom = e.target.value;
-    if (ITEM_SETTINGS.chestsColor === 'custom') applyItemDungeonColors();
-    saveItemSettings();
-  });
-  document.querySelectorAll('input[name="its-default-prize"]').forEach(function(r) {
-    r.addEventListener('change', function() {
-      if (!r.checked) return;
-      ITEM_SETTINGS.defaultPrize = r.value;
-      // Session-only, on purpose: the next launch goes back to the default for
-      // the seed's dungeon item shuffle setting.
-      window._prizeOverride = r.value;
-      saveItemSettings();
-      if (window.applyDefaultPrizeToAll) window.applyDefaultPrizeToAll();
-    });
-  });
-  document.querySelectorAll('input[name="its-complete-color"]').forEach(function(r) {
-    r.addEventListener('change', function() {
-      if (!r.checked) return;
-      ITEM_SETTINGS.completeColor = r.value;
-      saveItemSettings(); applyItemDungeonColors();
-    });
-  });
-  document.getElementById('item-opt-complete-custom').addEventListener('input', function(e) {
-    ITEM_SETTINGS.completeCustom = e.target.value;
-    if (ITEM_SETTINGS.completeColor === 'custom') applyItemDungeonColors();
-    saveItemSettings();
-  });
-  document.querySelectorAll('input[name="its-checks-color"]').forEach(function(r) {
-    r.addEventListener('change', function() {
-      if (!r.checked) return;
-      ITEM_SETTINGS.checksColor = r.value;
-      saveItemSettings(); applyChecksColor();
-    });
-  });
-  document.getElementById('item-opt-checks-custom').addEventListener('input', function(e) {
-    ITEM_SETTINGS.checksCustom = e.target.value;
-    if (ITEM_SETTINGS.checksColor === 'custom') applyChecksColor();
-    saveItemSettings();
-  });
-  document.getElementById('item-opt-dungeon-fill').addEventListener('change', function(e) {
-    ITEM_SETTINGS.dungeonFillEnabled = e.target.checked;
-    saveItemSettings(); applyItemDungeonFill();
-  });
-  document.getElementById('item-opt-dungeon-box').addEventListener('change', function(e) {
-    ITEM_SETTINGS.dungeonBoxEnabled = e.target.checked;
-    saveItemSettings(); applyItemDungeonBox();
-  });
-  document.getElementById('item-opt-show-boss').addEventListener('change', function(e) {
-    ITEM_SETTINGS.showBoss = e.target.checked;
-    saveItemSettings(); applyShowBoss();
-  });
-  document.getElementById('item-opt-dungeon-chests').addEventListener('change', function(e) {
-    ITEM_SETTINGS.dungeonChests = e.target.checked;
-    saveItemSettings();
-    // Turning it off takes the card away immediately, rather than leaving a
-    // stale one on screen until the pointer moves.
-    if (!ITEM_SETTINGS.dungeonChests) {
-      window._dngHoverSlot = null;
-      if (window.hideDungeonPanel) window.hideDungeonPanel();
-    } else if (window.refreshDungeonPanel) {
-      window.refreshDungeonPanel();
-    }
-  });
-
-  // Background image picker
-  var fileInput = document.getElementById('item-bg-image-file');
-  if (fileInput) {
-    fileInput.addEventListener('change', function(e) {
-      var file = e.target.files && e.target.files[0];
-      if (!file) return;
-      var reader = new FileReader();
-      reader.onload = function() {
-        if (!saveItemBgImage(reader.result)) return;
-        updateItemBgImageStatus();
-        applyItemBg('image');
-        document.querySelectorAll('input[name="its-bg"]').forEach(function(r){ r.checked = (r.value === 'image'); });
-      };
-      reader.onerror = function() { alert('Could not read that file.'); };
-      reader.readAsDataURL(file);
-      fileInput.value = '';
-    });
-  }
-  var clearBtn = document.getElementById('item-bg-image-clear');
-  if (clearBtn) {
-    clearBtn.addEventListener('click', function() {
-      saveItemBgImage('');
-      updateItemBgImageStatus();
-      document.documentElement.style.removeProperty('--bg-image');
-      if (ITEM_SETTINGS.bg === 'image') {
-        applyItemBg('black');
-        document.querySelectorAll('input[name="its-bg"]').forEach(function(r){ r.checked = (r.value === 'black'); });
-      }
-    });
-  }
-  document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape') closeItemSettings();
-  });
-}
-
 function initItemSettings() {
   loadItemSettings();
-  // Move the overlay out of <body> — body gets CSS zoom when the tracker is
-  // scaled, which would shift the fixed-position modal out of the viewport.
-  var overlay = document.getElementById('item-settings-overlay');
-  if (overlay && overlay.parentElement !== document.documentElement) {
-    document.documentElement.appendChild(overlay);
-  }
   applyItemFillVariable();
   applyItemDungeonColors();
   applyChecksColor();
@@ -1034,9 +528,56 @@ function initItemSettings() {
   applyItemBg(ITEM_SETTINGS.bg);
   applyItemDungeonBox();
   applyShowBoss();
+  applyWorldBox();
   refreshItemFills();
-  wireItemSettingsHandlers();
+  publishDefaultPrize();
 }
+
+// The Settings window can't see this session's default-prize pick (it is never
+// stored for the next launch), so it is published here for that window to show.
+function publishDefaultPrize() {
+  try { localStorage.setItem('alttp-itemtracker-default-prize-now', ITEM_SETTINGS.defaultPrize); } catch (e) {}
+}
+
+// Settings live in their own window now (the Item Tracker tab of Settings).
+function openItemSettings() {
+  publishDefaultPrize();
+  if (window.electronAPI && window.electronAPI.openItemSettings) window.electronAPI.openItemSettings();
+  else window.open('itemtracker-settings.html', 'alttp-settings', 'width=480,height=820,resizable=yes,scrollbars=yes');
+}
+
+// That window writes localStorage and pings here; re-read and re-apply.
+var _layoutAtLoad = (function () { try { return localStorage.getItem('alttp-items-layout') === 'stacked' ? 'stacked' : 'standard'; } catch (e) { return 'standard'; } })();
+try {
+  new BroadcastChannel('alttp-item-settings').onmessage = function (e) {
+    if (!e.data || e.data.type !== 'item-settings-changed') return;
+    var lay = 'standard';
+    try { lay = localStorage.getItem('alttp-items-layout') === 'stacked' ? 'stacked' : 'standard'; } catch (er) {}
+    if (lay !== _layoutAtLoad) { location.reload(); return; }   // the stacked rows are built once at load
+    var prevBg = ITEM_SETTINGS.bg, prevChests = ITEM_SETTINGS.dungeonChests;
+    var prevPrize = ITEM_SETTINGS.defaultPrize, prevWorld = ITEM_SETTINGS.worldBox;
+    loadItemSettings();
+    // loadItemSettings lets the window's ?bg= win; here the new stored choice must.
+    try { ITEM_SETTINGS.bg = localStorage.getItem('alttp-tracker-bg') || 'black'; } catch (er) {}
+    if (ITEM_SETTINGS.bg === 'image' && !ITEM_SETTINGS.bgImage) ITEM_SETTINGS.bg = 'black';
+    applyItemFillVariable(); applyItemDungeonColors(); applyChecksColor();
+    applyItemDungeonFill(); applyItemDungeonBox(); applyShowBoss(); applyWorldBox(); refreshItemFills();
+    // The boxes add a few px to View-2's width, so refit the window.
+    if (prevWorld !== ITEM_SETTINGS.worldBox && typeof fitWindowToContent === 'function') setTimeout(fitWindowToContent, 50);
+    if (ITEM_SETTINGS.bg !== prevBg || ITEM_SETTINGS.bg === 'image') applyItemBg(ITEM_SETTINGS.bg);
+    if (e.data.defaultPrize && e.data.defaultPrize !== prevPrize) {
+      window._prizeOverride = e.data.defaultPrize;   // session-only, as before
+      ITEM_SETTINGS.defaultPrize = e.data.defaultPrize;
+      if (window.applyDefaultPrizeToAll) window.applyDefaultPrizeToAll();
+    }
+    if (prevChests && !ITEM_SETTINGS.dungeonChests) {
+      window._dngHoverSlot = null;
+      if (window.hideDungeonPanel) window.hideDungeonPanel();
+    } else if (ITEM_SETTINGS.dungeonChests && window.refreshDungeonPanel) {
+      window.refreshDungeonPanel();
+    }
+  };
+} catch (e) {}
 
 // ── DOMContentLoaded: init tracker then connect via items.js stack ────────────
 document.addEventListener('DOMContentLoaded', function() {
@@ -1061,136 +602,8 @@ function changeTrackerScale(delta) {
   setTimeout(fitWindowToContent, 50);
 }
 
-// ── New Game Hotkey ───────────────────────────────────────────────────────────
+// ── New Game hotkey: main fires it here (the key itself is set in Settings) ──
 (function() {
-  var DEFAULT_KEY = '\\';
-  var DEFAULT_ACCEL = '\\'; // Electron accelerator for backslash
-  var _hotkeyEnabled  = false;
-  var _currentAccel   = DEFAULT_ACCEL;
-  var _currentDisplay = DEFAULT_KEY;
-  var _recording = false;
-
-  // Map DOM KeyboardEvent code → Electron accelerator token
-  var CODE_TO_ACCEL = {
-    'Backslash': '\\', 'BracketLeft': '[', 'BracketRight': ']',
-    'Semicolon': ';',  'Quote': "'",       'Comma': ',',
-    'Period': '.',     'Slash': '/',       'Backquote': '`',
-    'Minus': '-',      'Equal': '=',       'Space': 'Space',
-    'Tab': 'Tab',      'Escape': 'Escape', 'Backspace': 'Backspace',
-    'Delete': 'Delete','Insert': 'Insert', 'Home': 'Home',
-    'End': 'End',      'PageUp': 'PageUp', 'PageDown': 'PageDown',
-    'ArrowUp': 'Up',   'ArrowDown': 'Down','ArrowLeft': 'Left','ArrowRight': 'Right',
-  };
-
-  function keyEventToAccel(e) {
-    var parts = [];
-    if (e.ctrlKey)  parts.push('Ctrl');
-    if (e.altKey)   parts.push('Alt');
-    if (e.shiftKey) parts.push('Shift');
-    if (e.metaKey)  parts.push('Super');
-    var code = e.code;
-    var key;
-    if (CODE_TO_ACCEL[code]) {
-      key = CODE_TO_ACCEL[code];
-    } else if (/^Key([A-Z])$/.test(code)) {
-      key = code.slice(3); // "KeyA" → "A"
-    } else if (/^Digit(\d)$/.test(code)) {
-      key = code.slice(5); // "Digit1" → "1"
-    } else if (/^F(\d+)$/.test(code)) {
-      key = code; // "F5" stays "F5"
-    } else {
-      key = e.key.length === 1 ? e.key : code;
-    }
-    parts.push(key);
-    return parts.join('+');
-  }
-
-  // Human-readable display for the recorded key
-  function keyEventToDisplay(e) {
-    var parts = [];
-    if (e.ctrlKey)  parts.push('Ctrl');
-    if (e.altKey)   parts.push('Alt');
-    if (e.shiftKey) parts.push('Shift');
-    if (e.metaKey)  parts.push('Win');
-    parts.push(e.key === '\\' ? '\\' : (e.key.length === 1 ? e.key.toUpperCase() : e.key));
-    return parts.join('+');
-  }
-
-  function setStatus(msg, color) {
-    var el = document.getElementById('item-hotkey-status');
-    if (el) { el.textContent = msg; el.style.color = color || '#888'; }
-  }
-
-  function setDisplay(txt) {
-    var el = document.getElementById('item-hotkey-display');
-    if (el) el.textContent = txt;
-  }
-
-  function syncSubEnabled() {
-    var sub = document.getElementById('item-hotkey-sub');
-    if (sub) sub.classList.toggle('disabled', !_hotkeyEnabled);
-  }
-
-  async function applyHotkey() {
-    if (!window.electronAPI || !window.electronAPI.registerNewgameHotkey) return;
-    var result = await window.electronAPI.registerNewgameHotkey(_currentAccel);
-    if (result && result.ok) {
-      setStatus('Active: ' + _currentDisplay, '#5a5');
-    } else {
-      setStatus('Failed: ' + (result && result.error ? result.error : 'unknown'), '#c55');
-    }
-  }
-
-  async function removeHotkey() {
-    if (!window.electronAPI || !window.electronAPI.unregisterNewgameHotkey) return;
-    await window.electronAPI.unregisterNewgameHotkey();
-    setStatus('Hotkey disabled', '#888');
-  }
-
-  // Wire up enable checkbox
-  document.getElementById('item-hotkey-enabled').addEventListener('change', async function(e) {
-    _hotkeyEnabled = e.target.checked;
-    syncSubEnabled();
-    if (_hotkeyEnabled) {
-      await applyHotkey();
-    } else {
-      await removeHotkey();
-    }
-  });
-
-  // Record button — capture next keydown
-  document.getElementById('item-hotkey-record-btn').addEventListener('click', function() {
-    if (!_hotkeyEnabled) return;
-    _recording = true;
-    setStatus('Press any key...', '#fa0');
-    setDisplay('...');
-    var btn = this;
-    btn.disabled = true;
-
-    function onKey(e) {
-      // Ignore bare modifiers
-      if (['Control','Alt','Shift','Meta'].indexOf(e.key) !== -1) return;
-      e.preventDefault();
-      e.stopPropagation();
-      _recording = false;
-      window.removeEventListener('keydown', onKey, true);
-      btn.disabled = false;
-      _currentAccel   = keyEventToAccel(e);
-      _currentDisplay = keyEventToDisplay(e);
-      setDisplay(_currentDisplay);
-      if (_hotkeyEnabled) applyHotkey();
-    }
-    window.addEventListener('keydown', onKey, true);
-  });
-
-  // Reset to default
-  document.getElementById('item-hotkey-reset-btn').addEventListener('click', function() {
-    _currentAccel   = DEFAULT_ACCEL;
-    _currentDisplay = DEFAULT_KEY;
-    setDisplay(DEFAULT_KEY);
-    if (_hotkeyEnabled) applyHotkey();
-  });
-
   // Listen for newgame fired from main process via the hotkey.
   // Do NOT set _itemsResettingGame here — this is an originating event,
   // not a received broadcast, so resetItemTracker() must be free to
@@ -1200,27 +613,8 @@ function changeTrackerScale(delta) {
       if (typeof resetItemTracker === 'function') resetItemTracker();
     });
   }
-
-  // Init
-  syncSubEnabled();
-  setStatus('');
 })();
 </script>
-<script>
-// Layout: the stacked rows are built once at load (js/mobile.js), so a change reloads.
-(function () {
-  var cur = 'standard';
-  try { cur = localStorage.getItem('alttp-items-layout') === 'stacked' ? 'stacked' : 'standard'; } catch (e) {}
-  document.querySelectorAll('input[name="its-layout"]').forEach(function (r) {
-    r.checked = r.value === cur;
-    r.addEventListener('change', function () {
-      if (!r.checked) return;
-      try { localStorage.setItem('alttp-items-layout', r.value); } catch (e) {}
-      location.reload();
-    });
-  });
-})();
-</script>
-<script src="js/mobile.js?v=27"></script>
+<script src="js/mobile.js?v=32"></script>
 </body>
 </html>

@@ -33,6 +33,11 @@
     '#stk-root .stk-mid .check-count-box { margin:0; }',
     '#stk-root .stk-hccol { display:flex; flex-direction:column; align-items:stretch; gap:2px; margin:0 2px; }',
     '#stk-root .stk-hccol .dungeon-slot { margin:0; }',
+    // Settings → World boxes turns the borders on (html.world-box-on) and sets the colours.
+    '#stk-root .stk-world { display:flex; align-items:flex-end; }',
+    'html.world-box-on #stk-root .stk-world { padding:2px 1px; margin:0 2px; border:1px solid; border-radius:4px; }',
+    'html.world-box-on #stk-root .stk-lw { border-color:var(--stk-lw, #e67e22); }',
+    'html.world-box-on #stk-root .stk-dw { border-color:var(--stk-dw, #b39ddb); }',
     '#stk-root .stk-hccol .ct-group { flex-direction:column; width:auto; padding:2px 3px; border-color:#555; border-radius:3px; gap:2px; }',
     '#stk-root.stk-big .item-count { font-size:14px; }',
     // Agahnim and GO sit at the window's edges: open their name tooltips inward.
@@ -89,7 +94,14 @@
     // CT sits right on top of HC, in the room HC leaves under the taller boxes (Chris, Oct 2026).
     var hcCol = document.createElement('div'); hcCol.className = 'stk-hccol';
     [q1('.ct-group'), dslot('hc')].forEach(function (e) { if (e) hcCol.appendChild(e); });
-    rowOf('stk-dungeons', [hcCol].concat(['ep','dp','toh','pod','sp','sw','tt','ip','mm','tr','gt'].map(dslot)));
+    // Light World and Dark World dungeons each in a box of their own (Chris, Oct 2026).
+    var world = function (cls, keys) {
+      var g = document.createElement('div'); g.className = 'stk-world ' + cls;
+      keys.map(dslot).forEach(function (e) { if (e) g.appendChild(e); });
+      return g;
+    };
+    rowOf('stk-dungeons', [hcCol, world('stk-lw', ['ep','dp','toh']),
+                           world('stk-dw', ['pod','sp','sw','tt','ip','mm','tr']), dslot('gt')]);
     tc.parentNode.insertBefore(root, tc);
     // Bigger chest counts when key drop isn't adding its own (they're short then).
     // repaintAllDungeons runs on every settings change, so it re-checks there.
@@ -154,6 +166,7 @@
     'html.mobile .tracker-bottom-bar { height:auto !important; min-height:32px; box-sizing:border-box; }',
     'html.mobile .tracker-bottom-bar .size-btn, html.mobile #item-settings-btn {',
     '  width:34px; height:28px; font-size:18px; line-height:1; margin-right:4px; padding:0; }',
+    'html.mobile #item-settings-btn { width:auto; padding:0 10px; font-size:14px; }',
     // Reset and New Game the same height as the rest, for a finger.
     'html.mobile #item-reconnect-btn { width:34px; height:28px; font-size:18px; line-height:26px; }',
     'html.mobile #item-newgame-btn { height:28px; font-size:14px; line-height:26px; padding:0 12px; margin-left:4px; }',

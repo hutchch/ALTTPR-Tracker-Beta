@@ -51,7 +51,7 @@ html[data-bg="transparent"] body::before {
 html[data-bg="transparent"] .bbg-bar {
   -webkit-app-region: drag;
   background: rgba(0,0,0,0.6) !important;
-  border-top-color: rgba(255,255,255,0.2) !important;
+  border-bottom-color: rgba(255,255,255,0.2) !important;
 }
 html[data-bg="transparent"] .bbg-bar * {
   -webkit-app-region: no-drag;
@@ -476,31 +476,31 @@ body.dng-phase .dng-area, body.dng-phase .dng-area * { visibility: hidden !impor
 .bdng-row .bdng-keys.full   { color: #2ecc71; }
 .bdng-row .bdng-chests.full { color: #2ecc71; }
 
-/* Bottom bar with Settings ---------------------------------------------- */
+/* Top bar (−/+), like the map's — keeps the bottom edge clean for OBS crops -- */
 .bbg-bar {
-  display: flex; align-items: center; gap: 6px;
-  padding: 3px 8px;
+  display: flex; align-items: center; gap: 4px;
+  padding: 2px 6px;
   background: #111;
-  border-top: 1px solid #222;
+  border-bottom: 1px solid #222;
   flex-shrink: 0;
   position: relative; z-index: 30000;
   width: 100%;
 }
 .bsettings-btn {
-  font-family: Arial, sans-serif; font-size: 10px; color: #ccc;
+  font-family: Arial, sans-serif; font-size: 8px; color: #ccc;
   background: #1a1a1a; border: 1px solid #444; border-radius: 3px;
-  padding: 2px 8px; cursor: pointer; outline: none;
+  height: 13px; padding: 0 5px; cursor: pointer; outline: none;
   display: inline-flex; align-items: center; gap: 4px;
 }
 .bsettings-btn:hover { border-color: #4dff88; color: #fff; }
 .bsettings-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 .bsettings-btn:disabled:hover { border-color: inherit; color: inherit; }
-.bsize-btn { padding: 2px 5px; min-width: 20px; justify-content: center; font-size: 13px; line-height: 1; }
+.bsize-btn { width: 12px; height: 12px; padding: 0; min-width: 12px; justify-content: center; font-size: 8px; font-weight: bold; line-height: 1; }
 
 /* ── Item Animation overlay ─────────────────────────────────────────────── */
 #item-anim-overlay {
   position: fixed; top: 0; left: 0; right: 0;
-  /* bottom is set dynamically in JS to stop above the bbg-bar */
+  /* top is set dynamically in JS to start below the bbg-bar */
   bottom: 0;
   display: flex; align-items: center; justify-content: center;
   z-index: 20000;
@@ -713,17 +713,16 @@ body.dng-phase .dng-area, body.dng-phase .dng-area * { visibility: hidden !impor
 </style>
 </head>
 <body>
+<div class="bbg-bar">
+  <button class="bsettings-btn bsize-btn" onclick="bcastSizeDown()">−</button>
+  <button class="bsettings-btn bsize-btn" onclick="bcastSizeUp()">+</button>
+  <button class="bsettings-btn bsize-btn" title="Settings" style="font-size:11px;font-weight:normal;" onclick="if(window.electronAPI&&window.electronAPI.openBcastSettings)window.electronAPI.openBcastSettings();else window.open('bcast-settings.html','alttp-settings','width=480,height=820,resizable=yes,scrollbars=yes');">&#9881;&#xFE0E;</button>
+</div>
 <div class="broadcast-container">
   <div class="bcast-row" id="row1"></div>
   <div class="bcast-row" id="row2"></div>
   <div class="bcast-row" id="row3"></div>
   <div class="bcast-row" id="row4"></div>
-</div>
-<div class="bbg-bar">
-  <button class="bsettings-btn bsize-btn" onclick="bcastSizeDown()">−</button>
-  <button class="bsettings-btn bsize-btn" onclick="bcastSizeUp()">+</button>
-  <button class="bsettings-btn" onclick="openSettingsPopout()">⚙ Settings</button>
-  <button class="bsettings-btn" id="item-sounds-btn" onclick="openItemSounds()">♪ Item Sounds</button>
 </div>
 
 <div id="dng-card"></div>
@@ -857,33 +856,7 @@ function applyBg(bg) {
   if (window.electronAPI && window.electronAPI.setBroadcastBg) window.electronAPI.setBroadcastBg(bg);
 }
 
-// Go Mode's sound now lives with the item sounds, so it follows the active
-// profile (and goes quiet on "No Sounds"). The old broadcast-settings sound is
-// still honoured when a profile has none of its own, so an existing setup keeps
-// working without being re-imported.
-// Per-sound volume, set in the Item Sounds window and stored beside the sound
-// (see bcast-sounds.html). Missing or unreadable = full volume.
-function soundVolume(storeKey) {
-  var v = parseInt(localStorage.getItem(storeKey + '-vol'), 10);
-  if (isNaN(v)) return 1;
-  return Math.max(0, Math.min(1, v / 100));
-}
-
-function playGomodeSound() {
-  if (RACE_MODE) return; // Race Mode: no Go Mode sound.
-  var p = parseInt(localStorage.getItem('alttp-sound-profile') || '1', 10);
-  if (p === 5) return;                                    // "No Sounds" profile
-  var pre = 'alttp-item-sound-' + ((p >= 2 && p <= 4) ? 'p' + p + '-' : '');
-  var dataUrl = localStorage.getItem(pre + 'gomode');
-  var vol = soundVolume(pre + 'gomode');
-  if (!dataUrl && SETTINGS.gomodeSoundEnabled) { dataUrl = SETTINGS.gomodeSoundData; vol = 1; }
-  if (!dataUrl) return;
-  try {
-    var audio = new Audio(dataUrl);
-    audio.volume = vol;
-    audio.play().catch(function() {});
-  } catch(e) {}
-}
+// Item and Go Mode sounds play from the Item Tracker now (js/item-sounds.js).
 
 var BASE = (function() {
   var p = new URLSearchParams(window.location.search);
@@ -1418,11 +1391,9 @@ function buildV2View(container) {
 var _v2Scale = parseInt(localStorage.getItem('bcast-v2-scale') || localStorage.getItem('bcast-race-scale') || '100', 10) || 100;
 function fitV2View() {
   var root = document.querySelector('.rv'); if (!root) return;
-  var bar = document.querySelector('.bbg-bar');
   var W = window.innerWidth - 2 * Math.max(8, root.getBoundingClientRect().left);   // the same margin both sides
-  // From the view's own top down to the bottom bar — not a guess at the
-  // margins, which left the dungeons under the bar on the Mac (Chris, Oct 2026).
-  var H = (bar ? bar.getBoundingClientRect().top : window.innerHeight) - root.getBoundingClientRect().top - 6;
+  // From the view's own top (already below the top bar) to the window bottom.
+  var H = window.innerHeight - root.getBoundingClientRect().top - 6;
   var pz = root.querySelector('.rv-prizes');
   var cell = 44;
   for (var i = 0; i < 5; i++) {
@@ -1585,7 +1556,6 @@ function updateItem(key, val) {
     _appliedGomode = val;
     btn.className = 'bgo-btn' + (val === 1 ? ' on' : val === 2 ? ' feeling' : '');
     if (val === 1 && prev !== 1) {
-      playGomodeSound();
       if (SETTINGS.gomodeSparksEnabled) startGomodeSparks();
       if (SETTINGS.itemAnimEnabled && !_animSuppressNext) {
         queueItemAnim('gomode', imgSrc('gomode', 1), 'Go Mode !!');
@@ -1633,8 +1603,6 @@ function updateItem(key, val) {
     // as its square shows it (Chris, Oct 2026).
     var animSrc = key === 'boomerang' ? BASE + '/' + (_boomRed ? 'boomerang2' : 'boomerang1') + '.png' : imgSrc(key, val);
     queueItemAnim(key, animSrc, animLabel);
-    // Per-item collect sound (not for bomb)
-    playItemSound(key, val);
   }
 
   if (key === 'boomerang') { paintBoom(); return; }
@@ -1766,7 +1734,6 @@ function applySnap(snap) {
       // Animate when the big key is newly obtained (not on the startup seed).
       if (bigkey && !prevBigkey && !_animSuppressNext && SETTINGS.itemAnimEnabled && SETTINGS.bigKeyAnimEnabled) {
         queueItemAnim('_bigkey_' + key, BASE + '/bigkey1.png', (DUNGEON_NAMES[key] || key.toUpperCase()) + ' Big Key');
-        playItemSound('bigkey');
       }
     }
     if (mapState     !== undefined && mapState     !== cache.map)     {
@@ -1774,7 +1741,6 @@ function applySnap(snap) {
       d.map.src     = BASE+'/map'     + (mapState     ? '1' : '0') + '.png'; cache.map     = mapState;
       if (mapState && !prevMap && !_animSuppressNext && SETTINGS.itemAnimEnabled && SETTINGS.mapAnimEnabled) {
         queueItemAnim('_map_' + key, BASE + '/map1.png', (DUNGEON_NAMES[key] || key.toUpperCase()) + ' Map');
-        playItemSound('map');
       }
     }
     if (compassState !== undefined && compassState !== cache.compass) {
@@ -1782,7 +1748,6 @@ function applySnap(snap) {
       d.compass.src = BASE+'/compass' + (compassState ? '1' : '0') + '.png'; cache.compass = compassState;
       if (compassState && !prevCompass && !_animSuppressNext && SETTINGS.itemAnimEnabled && SETTINGS.compassAnimEnabled) {
         queueItemAnim('_compass_' + key, BASE + '/compass1.png', (DUNGEON_NAMES[key] || key.toUpperCase()) + ' Compass');
-        playItemSound('compass');
       }
     }
     // Update the prize image only if the snap supplied prize info — some snaps
@@ -1826,7 +1791,6 @@ function applySnap(snap) {
     _appliedGtBigKey = snap.gtBigKey;
     if (snap.gtBigKey && !prevGtBk && !_animSuppressNext && SETTINGS.itemAnimEnabled && SETTINGS.bigKeyAnimEnabled) {
       queueItemAnim('_bigkey_gt', BASE + '/bigkey1.png', "Ganon's Tower Big Key");
-      playItemSound('bigkey');
     }
   }
 
@@ -1985,10 +1949,10 @@ function _playItemAnim(src, label, done) {
   var canvas    = document.getElementById('item-anim-canvas');
   var container = document.querySelector('.broadcast-container');
 
-  // Clip overlay to stop above the bottom bar so it stays visible
+  // Start the overlay below the top bar so the bar stays visible
   var bar = document.querySelector('.bbg-bar');
   var barH = bar ? bar.getBoundingClientRect().height : 0;
-  overlay.style.bottom = barH + 'px';
+  overlay.style.top = barH + 'px';
 
   var overlayH = window.innerHeight - barH;
   canvas.width  = window.innerWidth;
@@ -2477,48 +2441,7 @@ function _hexToRgba(hex, alpha) {
   return 'rgba('+r+','+g+','+b+','+alpha.toFixed(3)+')';
 }
 
-// ── Per-item sounds ───────────────────────────────────────────────────────
-function playItemSound(key, val) {
-  if (RACE_MODE) return; // Race Mode: no item collect sounds.
-  try {
-    // Check level-specific sound first (e.g. 'sword-2' for Master Sword),
-    // then fall back to the base key sound (e.g. 'sword' for any sword).
-    // Sound profiles: profile 1 uses the original unprefixed keys, 2 and 3
-    // prefix theirs (see bcast-sounds.html). Read fresh each time so switching
-    // profiles takes effect without reopening the broadcast view.
-    var _p = parseInt(localStorage.getItem('alttp-sound-profile') || '1', 10);
-    if (_p === 5) return;                       // "No Sounds" profile
-    var _pre = 'alttp-item-sound-' + ((_p >= 2 && _p <= 4) ? 'p' + _p + '-' : '');
-    // Which entry answered matters now: the volume lives beside that sound.
-    var _sk = (val !== undefined && localStorage.getItem(_pre + key + '-' + val))
-            ? (_pre + key + '-' + val) : (_pre + key);
-    var dataUrl = localStorage.getItem(_sk);
-    if (!dataUrl) return;
-    var a = new Audio(dataUrl);
-    a.volume = soundVolume(_sk);
-    a.play().catch(function() {});
-  } catch(e) {}
-}
-
-function openItemSounds() {
-  if (RACE_MODE) return; // disabled in Race Mode
-  if (window.electronAPI && window.electronAPI.openBcastSounds) {
-    window.electronAPI.openBcastSounds();
-  } else {
-    window.open('bcast-sounds.html', 'alttp-bcast-sounds', 'width=480,height=620,resizable=yes');
-  }
-}
-
-// Open the broadcast settings popout (Electron native window, or a browser
-// window as fallback). The popout writes SETTINGS to localStorage and pings
-// this view via the 'bcast-settings-changed' BroadcastChannel message.
-function openSettingsPopout() {
-  if (window.electronAPI && window.electronAPI.openBcastSettings) {
-    window.electronAPI.openBcastSettings();
-  } else {
-    window.open('bcast-settings.html', 'alttp-bcast-settings', 'width=440,height=820,resizable=yes,scrollbars=yes');
-  }
-}
+// Broadcast settings: Item Tracker → Settings → Broadcast tab.
 
 // Reflect Race Mode in the UI: disable the Item Sounds button when racing.
 function updateRaceModeUI() {
@@ -2769,20 +2692,26 @@ function renderDngCard() {
   el.innerHTML = h + '</div>';
   placeDngCard();
 }
-// The dungeon row: Modern v2's dungeon boxes, otherwise the last row with
-// anything in it (Modern: the dungeons; Classic: PoD to TR and GO).
+// Where the card goes. Over the dungeons: Modern v2's dungeon boxes, otherwise
+// the last row with anything in it (Modern: the dungeons; Classic: PoD to TR
+// and GO). Over the items (Broadcast Settings → Dungeon Card, Chris, Oct 2026):
+// Modern v2's two item rows, otherwise every row above that last one.
 function dngArea() {
-  if (SETTINGS.viewStyle === 'v2') return document.querySelector('.rv-dngs');
+  var items = SETTINGS.dngCardOver === 'items';
+  if (SETTINGS.viewStyle === 'v2') return [].slice.call(document.querySelectorAll(items ? '.rv .rv-row' : '.rv-dngs'));
   var rows = [].filter.call(document.querySelectorAll('.broadcast-container .bcast-row'), function (r) { return r.children.length; });
-  return rows[rows.length - 1] || null;
+  return items ? rows.slice(0, -1) : rows.slice(-1);
 }
-// Put the card over the dungeon row and size its text to fill it.
+// Put the card over that area and size its text to fill it.
 function placeDngCard() {
   var el = document.getElementById('dng-card'), a = dngArea();
-  document.querySelectorAll('.dng-area').forEach(function (x) { if (x !== a) x.classList.remove('dng-area'); });
-  if (!el || !a || !document.body.classList.contains('dng-phase')) return;
-  a.classList.add('dng-area');
-  var r = a.getBoundingClientRect();
+  document.querySelectorAll('.dng-area').forEach(function (x) { if (a.indexOf(x) === -1) x.classList.remove('dng-area'); });
+  if (!el || !a.length || !document.body.classList.contains('dng-phase')) return;
+  a.forEach(function (x) { x.classList.add('dng-area'); });
+  var rs = a.map(function (x) { return x.getBoundingClientRect(); });
+  var top = Math.min.apply(null, rs.map(function (q) { return q.top; })), bot = Math.max.apply(null, rs.map(function (q) { return q.bottom; }));
+  var lft = Math.min.apply(null, rs.map(function (q) { return q.left; })), rgt = Math.max.apply(null, rs.map(function (q) { return q.right; }));
+  var r = { left: lft, top: top, width: rgt - lft, height: bot - top };
   var f = r.height / 3.4;   // two lines: the name (1.1em, its prize 1.5em) and the icons (1.5em)
   el.style.fontSize = f + 'px'; el.style.width = 'max-content';
   var need = el.offsetWidth;   // the card's natural width at that size
@@ -2792,7 +2721,11 @@ function placeDngCard() {
 window.addEventListener('resize', placeDngCard);
 // Card first, then items/card for their own times (Broadcast Settings → Dungeon Card).
 function updateDngCycle() {
-  var on = SETTINGS.dngCycleEnabled && !!_dc.card;
+  var c = _dc.card;
+  // Hyrule Castle is walked through all game long; once its chests are all
+  // found, the card has nothing left to say there (Chris, Oct 2026).
+  var hcDone = c && c.id === 'hc' && c.maxChests !== '?' && c.maxChests > 0 && c.chests >= c.maxChests;
+  var on = SETTINGS.dngCycleEnabled && !!c && !hcDone;
   if (!on || _dc.card.id !== _dc.id) {   // stop, or start over in a new dungeon
     clearTimeout(_dc.timer); _dc.timer = null;
     document.body.classList.remove('dng-phase');
