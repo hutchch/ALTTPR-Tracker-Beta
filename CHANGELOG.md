@@ -4,24 +4,46 @@ Everything below is relative to v1.1.20. Work in progress.
 
 ---
 
+## One Settings window
+
+- **Item Tracker, Broadcast and Item Sounds settings share one window**, with a tab for each. The Item Tracker's ⚙ opens it on Item Tracker (it replaces the in-window dialog); the broadcast view's Settings button opens it on Broadcast. Changes still apply as you make them — the item tracker re-reads them when the window pings it (a Layout change reloads the tracker, as before). The New Game hotkey now shows as active when the window is reopened while it's registered. Item Sounds is greyed out in Race Mode.
+- **Item sounds play from the Item Tracker**, so they work whether or not the broadcast view is open, and they no longer depend on the broadcast's animation settings. The rules are the same: first pickup or upgrade (not bombs, not a second bottle, not flute activation or mushroom → powder), big keys, maps, compasses, and Go Mode; silent in Race Mode and on the "No Sounds" profile; a seed load or New Game doesn't set them off. The broadcast view's ♪ Item Sounds button is gone (it's a tab now) and the broadcast plays no sounds.
+- **Buttons:** the Item Tracker's ⚙ is now a **⚙ Settings** button and 📡 reads **📡 Broadcast**, both in the same type as New Game. The item tracker's bottom bar is taller (26px) with bigger buttons and text, and the broadcast view's bar is the smaller size the item tracker's used to be — the two swapped. The broadcast view's −/+ bar moved from the bottom to the top, like the map's, so the bottom edge is clean for an OBS crop. The broadcast view's ⚙ Settings button is now a small ⚙ icon in its top bar, opening Settings on the Broadcast tab.
+
+## Automatic, signed patches
+
+- **The tracker can patch itself from GitHub.** On launch and on Check for Updates it reads `latest.json` from the patch repository (`hutchch/ALTTPR-Tracker-Patches`). When that lists a patch for exactly this version, the launcher shows **Patch x.y.z available — notes** with **↓ Install**; it downloads the patch, checks it, applies it through the same backed-up, roll-back-on-failure code as Apply Patch…, and offers a restart. A newer full release still takes priority.
+- **Patches are signed.** `npm run patch-keygen` makes an Ed25519 key pair in the version folder: `patch-signing-key.pem` (private — back it up, never ship or commit it) and `patch-public-key.pem` (ships with the app). The tracker installs a downloaded patch only if its SHA-256 matches and its signature verifies against that public key, it comes from the patch repository, and it's for this exact version; otherwise nothing changes and the bar says why.
+- **`tools/make-patch.js`** signs the patch and writes `latest.json` beside it when the private key is in the folder (`--notes "…"` for the launcher text), and never includes the private key, `latest.json` or the bundled SNI (`sni/`, which can't be patched and made patches 170 MB) in a patch. The patch is committed to the root of the patch repo's `main` beside `latest.json`, which points at it (a release asset still works for one over GitHub's 25 MB web-upload limit).
+- **Intermediate patches.** Build each patch from the release folder, to the same output place: make-patch reads the previous `latest.json` there and lists that patch's version (and any it already covered) under `also` in the new, signed patch, so trackers on the release or on any earlier patch of it are offered the newest one (`--also a,b` to name versions by hand). The tracker checks `also` against the signed patch, not the unsigned listing.
+- Full walkthrough: `Readme_Files/AUTO-PATCH-README.md`.
+
 ## Item tracker — View-2 layout
 
-- **Tracker Settings → Layout: View-1 / View-2.** View-1 is the layout as it was, and stays the default. View-2: the items in two rows of fifteen; then a row with Agahnim at the left and GO at the right, and between them CHECKS and BONKS, the prize counts and heart, DEATHS, REVIVALS and FLUTES — each stat a box of its own like CHECKS (Agahnim's and GO's name tooltips open inward so they aren't cut off at the window edge); then the twelve dungeons in a row, in the tablet's tall style, with the CT box directly on top of HC (in the room HC leaves under the taller boxes). Without key drop the chest counts are bigger (14px), since they're short. The window sizes itself to fit. Switching reloads the item tracker, since the rows are built once at load.
+- **Tracker Settings → Layout: View-1 / View-2.** View-1 is the layout as it was, and stays the default. View-2: the items in two rows of fifteen; then a row with Agahnim at the left and GO at the right, and between them CHECKS and BONKS, the prize counts and heart, DEATHS, REVIVALS and FLUTES — each stat a box of its own like CHECKS (Agahnim's and GO's name tooltips open inward so they aren't cut off at the window edge); then the twelve dungeons in a row, in the tablet's tall style, with the CT box directly on top of HC (in the room HC leaves under the taller boxes). Without key drop the chest counts are bigger (14px), since they're short. The window sizes itself to fit. Switching reloads the item tracker, since the rows are built once at load. **Settings → Layout → World boxes (View-2)** (off by default) boxes the Light World dungeons (EP, DP, ToH) and the Dark World ones (PoD to TR), each with its own colour picker — orange and light purple to start.
 
 ## SNI bundled with the tracker
 
 - **The tracker now ships with SNI and starts it for you.** On launch it checks whether something already answers on port 23074 — your own SNI or QUsb2Snes — and leaves that alone; otherwise it starts the built-in SNI, and stops it when the tracker quits. SNI is github.com/alttpo/sni (MIT); its LICENSE and Lua scripts come with it.
+- **Trackers pick SNI up sooner.** In the built app the trackers usually open before the built-in SNI is listening. The item tracker then waited 5 s before trying again and the map 3 s (plus up to 4 s more for its first read if it opened in the background). Both now retry every 0.75 s for the first few tries, and the map reads as soon as it attaches. Measured against a mock SNI that comes up late: map data in ~0.3 s and the item tracker in ~0.8 s after SNI is ready.
+- **Restart SNI and an SNI status bar.** App Settings → Connection has a **↻ Restart SNI** button that closes the built-in SNI and starts it again (it won't close an SNI / QUsb2Snes you started yourself — it says so). A bar along the bottom of the launcher shows whether anything is answering on 23074: green for running (built-in or your own), orange while starting or restarting, red when nothing is. It re-checks every 5 seconds, so closing SNI from its tray shows up.
+- **SNI closes with the tracker, even after a crash.** The tracker remembers the built-in SNI it started; if a session ends without quitting cleanly (a crash, a force-quit, Ctrl+C on `npm start`) and SNI is left running, the next launch recognises it as its own and closes it on the next quit. An SNI or QUsb2Snes you started yourself is still left alone. Ctrl+C / a terminate signal now stops it too.
 - **App Settings → Connection → Start SNI** turns that off (on by default), with a line saying which SNI is in use: built-in, already running, off, or not included in this build. Saved in the app's own settings.
 - **Building:** `npm run dist`, `dist:win`, `dist:mac` and `dist:linux` now fetch the matching SNI release first (`tools/fetch-sni.js`, into `sni/win`, `sni/mac`, `sni/linux`) and bundle it into the app's resources/sni. It's fetched once per SNI version; `SNI_VERSION` at the top of the script picks the version (v0.0.103 now). The Mac build gets SNI's universal program, so the Intel and Apple Silicon DMGs both work. `npm run fetch-sni` fetches it on its own — run it once before `npm start` to try the built-in SNI without building.
 - macOS: the tracker isn't signed, so Gatekeeper may ask about SNI the first time, as it does for the tracker. SNI shows its own tray / menu-bar icon while it runs.
 
 ## Broadcast — dungeon card released
 
+- **No card in a cleared Hyrule Castle.** Once HC's chests are all found, walking through it no longer brings up the card — the view stays on the items.
 - **The dungeon card can go over the items instead of the dungeons.** Broadcast Settings → Dungeon Card → "Show the dungeon over": the dungeons (as before, the default) or the items — every item row in Modern and Classic, the two item rows in Modern v2. The card fills that area, so over the items it's bigger.
 
 - **Modern v2 plays the dungeon animations again** — prize, map, compass and big key. Those animations come from the Modern view's dungeon boxes, which Modern v2 doesn't build, so it skipped them all. It now keeps a hidden set for that purpose.
 
 - **The dungeon card is out of hiding.** Its section is back in Broadcast Settings: in a dungeon, the last row switches between the items and the dungeon, for the number of seconds set there. Off by default — it saves under a new key, so a setting left over from testing doesn't switch it on.
+
+## Map — Ice Palace needs a sword for Bombos
+
+- **Bombos only melts Ice Palace's ice with a sword.** Ice Palace showed available with Bombos and no sword. Now the ice needs the Fire Rod, or Bombos plus a sword; in swordless mode Bombos works without one (the hammer is still required there). Same rule with Entrance Shuffle on.
 
 ## Map — the flute counts once it's activated
 

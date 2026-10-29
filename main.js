@@ -1559,8 +1559,8 @@ function portInUse(port) {
   });
 }
 
-async function startSni() {
-  if (sniChild || !sniAutoStart()) return;
+async function startSni(force) {
+  if (sniChild || (!force && !sniAutoStart())) return;
   const exe = sniExe();
   if (!fs.existsSync(exe)) { console.log('[sni] not bundled:', exe); return; }
   if (await portInUse(23074)) {
@@ -1597,6 +1597,21 @@ ipcMain.handle('sni-set-autostart', async (_e, on) => {
   store.set('sniAutoStart', !!on);
   if (on) await startSni(); else stopSni();
   return { autoStart: sniAutoStart(), ours: !!(sniChild || sniAdopted) };
+});
+
+// Close and start again (App Settings → Restart SNI). Only ours can be closed;
+// someone else's SNI / QUsb2Snes on the port is left alone and reported.
+ipcMain.handle('sni-restart', async () => {
+  if (!fs.existsSync(sniExe())) return { ok: false, error: 'SNI is not included in this build.' };
+  const wasOurs = !!(sniChild || sniAdopted);
+  stopSni();
+  for (let i = 0; i < 20 && await portInUse(23074); i++) await new Promise((r) => setTimeout(r, 150));
+  if (await portInUse(23074)) {
+    return { ok: false, error: wasOurs ? 'SNI did not close in time — try again.'
+                                       : 'Another SNI / QUsb2Snes is using port 23074; close it first.' };
+  }
+  await startSni(true);
+  return sniChild ? { ok: true } : { ok: false, error: 'SNI did not start.' };
 });
 
 // Clean up on quit

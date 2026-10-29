@@ -126,7 +126,7 @@ let previousSRAM = null;
 // Bumped with every change to this file, relayed in the broadcast snapshot so
 // the map's gear menu can show which build the ITEM TRACKER is running — the
 // two windows are packaged together but reload independently.
-window.ITEMS_BUILD = '1136a';
+window.ITEMS_BUILD = '1136b';
 let _bombClearTimer = null; // debounce: only clear bombs after sustained 0 reading
 
 const items = {
@@ -3159,6 +3159,7 @@ function connectWebSocket() {
         ws.binaryType = 'arraybuffer';
 
         ws.onopen = () => {
+            _reconnectTries = 0;
             console.log('WebSocket connected - requesting device list');
             updateConnectionStatus('Connecting');
             _stopReconnect();
@@ -3201,13 +3202,17 @@ function _stopReconnect() {
     if (reconnectInterval) { clearTimeout(reconnectInterval); reconnectInterval = null; }
 }
 
+// Fast retries first: the tracker often opens before SNI is listening (the app
+// starts the built-in SNI at the same moment), and a flat 5 s meant waiting up
+// to 5 s past the moment it was ready. Then back off (Chris, Oct 2026).
+var _reconnectTries = 0;
 function _scheduleReconnect() {
     _stopReconnect(); // always reset — ensures a clean single timer
     reconnectInterval = setTimeout(() => {
         reconnectInterval = null;
         console.log('Attempting to reconnect...');
         connectWebSocket();
-    }, 5000);
+    }, _reconnectTries++ < 8 ? 750 : 5000);
 }
 
 function handleWebSocketMessage(event) {

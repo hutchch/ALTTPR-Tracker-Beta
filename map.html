@@ -8456,6 +8456,8 @@ function mapConnect() {
       // Rate is dynamic via _mapPollRate (fast when focused, slow when backgrounded).
       _refreshMapPollRate();
       _mapPollTimer = setInterval(_mapPollFn, _mapPollRate);
+      _mapReconnectTries = 0;
+      _mapPollFn();   // read now — the interval's first tick is 1–4 s away
     }
   };
 
@@ -8475,9 +8477,11 @@ function mapConnect() {
   };
 }
 
+// Quick retries while SNI / the game is still coming up, then every 3 s.
+var _mapReconnectTries = 0;
 function _scheduleReconnect() {
   clearTimeout(_mapReconnectTimer);
-  _mapReconnectTimer = setTimeout(mapConnect, 3000);
+  _mapReconnectTimer = setTimeout(mapConnect, _mapReconnectTries++ < 8 ? 750 : 3000);
 }
 
 function openCheckList() {

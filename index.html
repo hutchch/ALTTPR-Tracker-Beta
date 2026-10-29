@@ -363,6 +363,23 @@ input:focus, select:focus { outline: none; border-color: #4dff88; }
 }
 #apply-patch-btn:hover { background: #24402a; }
 #apply-patch-btn:disabled { opacity: 0.5; cursor: default; }
+#sni-restart-btn {
+  margin-left: auto; padding: 4px 10px; font-size: 11px; cursor: pointer;
+  background: #1a2e4a; color: #7ab8f5; border: 1px solid #2a4e7a; border-radius: 4px;
+}
+#sni-restart-btn:hover { background: #2a4a6a; }
+#sni-restart-btn:disabled { opacity: 0.5; cursor: default; }
+/* SNI status along the bottom of the launcher */
+#sni-bar {
+  display: none; position: fixed; left: 0; right: 0; bottom: 0; height: 22px;
+  align-items: center; gap: 6px; padding: 0 12px; box-sizing: border-box;
+  background: #0d0d0d; border-top: 1px solid #222; font-size: 11px; color: #888;
+}
+#sni-bar.visible { display: flex; }
+#sni-bar .dot { width: 8px; height: 8px; border-radius: 50%; background: #555; }
+#sni-bar.ok .dot   { background: #4dff88; }
+#sni-bar.bad .dot  { background: #ff5555; }
+#sni-bar.busy .dot { background: #f39c12; }
 /* Two buttons share the row now — keep each label on one line. */
 #check-update-btn, #apply-patch-btn { white-space: nowrap; padding: 6px 6px; font-size: 11px; }
 #update-panel-status {
@@ -437,6 +454,7 @@ input:focus, select:focus { outline: none; border-color: #4dff88; }
   <div class="app-settings-row" id="sni-row" style="display:none">
     <label>Start SNI</label>
     <input id="sni-autostart" type="checkbox" checked>
+    <button id="sni-restart-btn" type="button" title="Close SNI and start it again">↻ Restart SNI</button>
   </div>
   <div class="app-settings-info" id="sni-status"></div>
 
@@ -465,6 +483,8 @@ input:focus, select:focus { outline: none; border-color: #4dff88; }
   </div>
 </div>
 
+<!-- SNI status along the bottom (fixed) -->
+<div id="sni-bar"><span class="dot"></span><span id="sni-bar-msg"></span></div>
 <!-- Update notification bar (shown when update available/ready) -->
 <div id="update-bar">
   <span id="update-bar-msg">Checking for updates…</span>
@@ -858,20 +878,43 @@ var IS_ELECTRON = !!(window.electronAPI && window.electronAPI.isElectron);
   if (!api || !api.sniStatus) return;
   var row = document.getElementById('sni-row'), box = document.getElementById('sni-autostart'),
       msg = document.getElementById('sni-status');
+  var btn = document.getElementById('sni-restart-btn'),
+      bar = document.getElementById('sni-bar'), barMsg = document.getElementById('sni-bar-msg');
+  var busy = false;
+  function setBar(cls, text) { bar.className = 'visible ' + cls; barMsg.textContent = text; }
   function show(st) {
     row.style.display = '';
     box.checked = !!st.autoStart;
+    btn.disabled = busy || !st.bundled;
     msg.textContent = !st.bundled ? 'SNI is not included in this build.'
       : st.ours ? 'Built-in SNI is running.'
       : st.listening ? 'Using the SNI / QUsb2Snes already running.'
       : st.autoStart ? 'Built-in SNI is not running.' : 'Built-in SNI is off.';
+    if (busy) return;
+    // The bar answers "can the trackers connect?" — anything on 23074 will do.
+    if (st.ours && st.listening)  setBar('ok', 'SNI: running (built-in) — port 23074');
+    else if (st.ours)             setBar('busy', 'SNI: starting…');
+    else if (st.listening)        setBar('ok', 'SNI / QUsb2Snes: running (your own) — port 23074');
+    else if (!st.bundled)         setBar('bad', 'SNI: not running — start SNI or QUsb2Snes');
+    else if (st.autoStart)        setBar('bad', 'SNI: not running — App Settings → Restart SNI');
+    else                          setBar('', 'SNI: off (App Settings → Start SNI)');
   }
   function refresh() { Promise.resolve(api.sniStatus()).then(show).catch(function () {}); }
   box.addEventListener('change', function () {
     Promise.resolve(api.sniSetAutoStart(box.checked)).then(function () { setTimeout(refresh, 800); });
   });
+  btn.addEventListener('click', function () {
+    if (busy || !api.sniRestart) return;
+    busy = true; btn.disabled = true; setBar('busy', 'SNI: restarting…');
+    Promise.resolve(api.sniRestart()).then(function (r) {
+      busy = false;
+      if (r && !r.ok) { setBar('bad', 'SNI: ' + (r.error || 'restart failed')); btn.disabled = false; setTimeout(refresh, 4000); }
+      else setTimeout(refresh, 800);
+    }).catch(function () { busy = false; refresh(); });
+  });
   refresh();
   setTimeout(refresh, 1500);   // main starts it alongside this window
+  setInterval(refresh, 5000);  // keep the bottom bar current (SNI closed from its tray, etc.)
 })();
 
 // Wire a checkbox-toggle to its adjacent Yes/No text label.
@@ -2104,7 +2147,7 @@ document.addEventListener('click', function(e) {
   var panelStatus = document.getElementById('update-panel-status');
   var checkBtn   = document.getElementById('check-update-btn');
 
-  function setBar(msg, type, showInstall) {
+  function setBar(msg, type, showInstall, label, onClick) {
     bar.className = 'visible' + (type === 'error' ? ' error' : '');
     barMsg.textContent = msg;
     // Remove any existing install button
@@ -2113,10 +2156,22 @@ document.addEventListener('click', function(e) {
     if (showInstall) {
       var btn = document.createElement('button');
       btn.id = 'install-update-btn';
-      btn.textContent = '↓ Download';
-      btn.onclick = function() { window.electronAPI.installUpdate(); };
+      btn.textContent = label || '↓ Download';
+      btn.onclick = onClick || function() { window.electronAPI.installUpdate(); };
       bar.appendChild(btn);
     }
+  }
+
+  // A signed patch from the patch repo: main.js downloads, checks and applies it.
+  function installPatch() {
+    var b = document.getElementById('install-update-btn');
+    if (b) { b.disabled = true; b.textContent = 'Installing…'; }
+    window.electronAPI.installPatch().then(function (r) {
+      if (b) { b.disabled = false; b.textContent = '↓ Install'; }
+      if (!r || r.canceled) return;
+      if (!r.ok) { setBar(r.error, 'error', false); return; }
+      setBar(r.upToDate ? 'Already up to date.' : 'Patch installed — restart to load it.', 'info', false);
+    }, function (e) { setBar('Patch failed: ' + e, 'error', false); });
   }
 
   function hideBar() {
@@ -2139,6 +2194,12 @@ document.addEventListener('click', function(e) {
     else if (status === 'up-to-date') {
       hideBar();
       setPanelStatus('You\'re up to date.', '#4dff88');
+      checkBtn.disabled = false;
+    }
+    else if (status === 'patch-available' && window.electronAPI.installPatch) {
+      var pv = info && info.version ? ' ' + info.version : '';
+      setBar('Patch' + pv + ' available' + (info && info.notes ? ' — ' + info.notes : '') + '.', 'info', true, '↓ Install', installPatch);
+      setPanelStatus('Patch' + pv + ' available.', '#7ab8f5');
       checkBtn.disabled = false;
     }
     else if (status === 'available') {

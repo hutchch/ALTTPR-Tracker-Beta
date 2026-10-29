@@ -511,6 +511,7 @@ html, body { margin: 0; background: #1a1a1a; height: auto; min-height: 100%; wid
 </style>
 </head>
 <body>
+<script src="js/settings-tabs.js?v=1"></script>
 <div id="settings-overlay" class="hidden">
   <div class="settings-modal">
     <div class="settings-header">
@@ -586,6 +587,11 @@ html, body { margin: 0; background: #1a1a1a; height: auto; min-height: 100%; wid
         <div class="settings-row">
           <label>Items <input type="number" id="opt-dng-items-secs" min="1" max="120" step="1" style="width:4em"> seconds</label>
           <label>Dungeon <input type="number" id="opt-dng-card-secs" min="1" max="120" step="1" style="width:4em"> seconds</label>
+        </div>
+        <div class="settings-row">
+          Show the dungeon over
+          <label><input type="radio" name="dng-card-over" value="dungeons"> the dungeons</label>
+          <label><input type="radio" name="dng-card-over" value="items"> the items</label>
         </div>
       </div>
 
@@ -896,6 +902,7 @@ function openSettings() {
   document.getElementById('opt-dng-cycle').checked      = SETTINGS.dngCycleEnabled;
   document.getElementById('opt-dng-items-secs').value   = SETTINGS.dngItemsSecs;
   document.getElementById('opt-dng-card-secs').value    = SETTINGS.dngCardSecs;
+  document.querySelectorAll('input[name="dng-card-over"]').forEach(function(r) { r.checked = r.value === SETTINGS.dngCardOver; });
   document.getElementById('opt-anim-label').checked     = SETTINGS.animShowLabel;
   document.getElementById('opt-map-anim').checked       = SETTINGS.mapAnimEnabled;
   document.getElementById('opt-compass-anim').checked   = SETTINGS.compassAnimEnabled;
@@ -1203,6 +1210,9 @@ function wireSettingsHandlers() {
   document.getElementById('opt-dng-cycle').addEventListener('change', function(e) {
     SETTINGS.dngCycleEnabled = e.target.checked;
     saveSettings();
+  });
+  document.querySelectorAll('input[name="dng-card-over"]').forEach(function(r) {
+    r.addEventListener('change', function() { if (r.checked) { SETTINGS.dngCardOver = r.value; saveSettings(); } });
   });
   [['opt-dng-items-secs', 'dngItemsSecs', 10], ['opt-dng-card-secs', 'dngCardSecs', 5]].forEach(function(o) {
     document.getElementById(o[0]).addEventListener('change', function(e) {

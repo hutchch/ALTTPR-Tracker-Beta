@@ -1,7 +1,7 @@
 {
   "name": "hutch-alttpr-tracker",
   "productName": "Hutch-ALTTPR Tracker",
-  "version": "1.1.20.1027",
+  "version": "1.1.21",
   "description": "A Link to the Past Randomizer item and map tracker with autotracking.",
   "main": "main.js",
   "scripts": {
