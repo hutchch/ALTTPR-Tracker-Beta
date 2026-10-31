@@ -9,7 +9,21 @@
                    'bombos','ether','quake','lamp','hammer','shovel','flute','net','book',
                    'bottle1','bottle2','bottle3','bottle4','somaria','byrna','cape','mirror',
                    'boots','gloves','flippers','moonpearl','sword','shield','tunic','agahnim','halfmagic'];
-  var prev = null;
+  // The last known value of every key. Two builders send snapshots (the full one
+  // and the slim one after each SRAM read); the slim one leaves out the map and
+  // compass flags, so diffing raw snapshots saw a map 'picked up' on every alternate
+  // snap and replayed its sound. Merging keeps the last value a key was seen with.
+  var known = null;
+  // The same sound can't play again within this window.
+  var COOLDOWN_MS = 2000;
+  var lastAt = {};
+
+  function merge(base, snap) {
+    var out = {}, k;
+    if (base) for (k in base) out[k] = base[k];
+    for (k in snap) if (snap[k] !== undefined && snap[k] !== null) out[k] = snap[k];
+    return out;
+  }
 
   function raceMode() {
     if (window._raceMode) return true;
@@ -59,19 +73,27 @@
   }
 
   function onSnap(snap) {
-    var last = prev; prev = snap;
+    var last = known; known = merge(known, snap);
     if (!last || raceMode()) return;          // first snap is the starting state
     var list = due(last, snap);
     // A seed load or New Game lands as a big jump all at once, not pickups.
     if (list.length > 4) return;
-    list.forEach(function (s) { play(s[0], s[1]); });
+    list.forEach(function (s) {
+      var now = Date.now();
+      if (now - (lastAt[s[0]] || 0) < COOLDOWN_MS) {
+        console.warn('[ItemSounds] suppressed repeat of ' + s[0] + ' (within ' + COOLDOWN_MS + ' ms)');
+        return;
+      }
+      lastAt[s[0]] = now;
+      play(s[0], s[1]);
+    });
   }
 
   try {
     new BroadcastChannel('alttp-tracker').onmessage = function (e) {
       if (!e.data) return;
       if (e.data.type === 'items' && e.data.data) onSnap(e.data.data);
-      else if (e.data.type === 'newgame') prev = null;
+      else if (e.data.type === 'newgame') known = null;
     };
   } catch (e) {}
 

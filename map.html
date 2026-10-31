@@ -1510,7 +1510,9 @@ function dungeonColor(key) {
                    || (it.agahnim && it.hammer)
                    || (it.agahnim && it.hookshot && (it.hammer || it.gloves >= 1 || it.flippers));
       if (!dwSouthSP) return 'red';
-      if (it.gloves >= 2 && !it.hammer) return 'yellow';
+      // Everything past the entrance wants the hammer; without it the hover
+      // card reads out of logic (dngpanel.js 'sp'), so the box must agree.
+      if (!it.hammer) return 'purple';
       if (shuffleSmallKeys()) {
         if (!it.spSmallKeys) return 'yellow';
       }

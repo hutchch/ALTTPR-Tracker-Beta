@@ -25,6 +25,8 @@ var ITEM_SETTINGS = {
   checksColor:   'white',     // white | black | grey | custom (CHECKS number)
   checksCustom:  '#ffffff',
   worldBox:      false,      // View-2: box the Light / Dark World dungeons
+  yItem:         true,       // outline the item equipped to Y (read over SNI)
+  dngDot:        true,       // green dot on the dungeon Link is in (off in race mode by default)
   lwColor:       '#e67e22',
   dwColor:       '#b39ddb'
 };
@@ -58,6 +60,9 @@ function loadItemSettings() {
     ITEM_SETTINGS.dungeonBoxEnabled  = localStorage.getItem('alttp-itemtracker-dungeon-box')  !== 'false';
     ITEM_SETTINGS.dungeonChests      = localStorage.getItem('alttp-itemtracker-dungeon-chests') === 'true';
     ITEM_SETTINGS.worldBox = localStorage.getItem('alttp-itemtracker-world-box') === 'true';
+    ITEM_SETTINGS.yItem    = localStorage.getItem('alttp-itemtracker-yitem') !== 'false';
+    var dd = localStorage.getItem('alttp-itemtracker-dng-dot');
+    ITEM_SETTINGS.dngDot   = dd === null ? localStorage.getItem('alttp-race-mode') !== 'yes' : dd === 'true';
     ITEM_SETTINGS.lwColor  = localStorage.getItem('alttp-itemtracker-lw-color') || ITEM_SETTINGS.lwColor;
     ITEM_SETTINGS.dwColor  = localStorage.getItem('alttp-itemtracker-dw-color') || ITEM_SETTINGS.dwColor;
     // Show Boss: on unless the user turned it off here. It is deliberately NOT
@@ -101,6 +106,8 @@ function saveItemSettings() {
     localStorage.setItem('alttp-itemtracker-show-boss',      ITEM_SETTINGS.showBoss            ? 'true' : 'false');
     localStorage.setItem('alttp-itemtracker-dungeon-chests', ITEM_SETTINGS.dungeonChests     ? 'true' : 'false');
     localStorage.setItem('alttp-itemtracker-world-box', ITEM_SETTINGS.worldBox ? 'true' : 'false');
+    localStorage.setItem('alttp-itemtracker-yitem', ITEM_SETTINGS.yItem ? 'true' : 'false');
+    localStorage.setItem('alttp-itemtracker-dng-dot', ITEM_SETTINGS.dngDot ? 'true' : 'false');
     localStorage.setItem('alttp-itemtracker-lw-color',  ITEM_SETTINGS.lwColor);
     localStorage.setItem('alttp-itemtracker-dw-color',  ITEM_SETTINGS.dwColor);
   } catch (e) {}
@@ -229,6 +236,9 @@ function fillItemSettingsForm() {
   document.getElementById('item-opt-show-boss').checked    = ITEM_SETTINGS.showBoss;
   document.getElementById('item-opt-dungeon-chests').checked = ITEM_SETTINGS.dungeonChests;
   document.getElementById('item-opt-world-box').checked = ITEM_SETTINGS.worldBox;
+  document.getElementById('item-opt-yitem').checked = ITEM_SETTINGS.yItem;
+  document.getElementById('item-opt-dng-dot').checked = ITEM_SETTINGS.dngDot;
+  document.getElementById('item-opt-dng-dot').disabled = localStorage.getItem('alttp-race-mode') === 'yes';
   document.getElementById('item-opt-lw-color').value = ITEM_SETTINGS.lwColor;
   document.getElementById('item-opt-dw-color').value = ITEM_SETTINGS.dwColor;
   document.getElementById('item-world-box-sub').classList.toggle('disabled', !ITEM_SETTINGS.worldBox);
@@ -350,6 +360,14 @@ function wireItemSettingsHandlers() {
   document.getElementById('item-opt-show-boss').addEventListener('change', function(e) {
     ITEM_SETTINGS.showBoss = e.target.checked;
     saveItemSettings(); applyShowBoss();
+  });
+  document.getElementById('item-opt-yitem').addEventListener('change', function(e) {
+    ITEM_SETTINGS.yItem = e.target.checked;
+    saveItemSettings();
+  });
+  document.getElementById('item-opt-dng-dot').addEventListener('change', function(e) {
+    ITEM_SETTINGS.dngDot = e.target.checked;
+    saveItemSettings();
   });
   document.getElementById('item-opt-dungeon-chests').addEventListener('change', function(e) {
     ITEM_SETTINGS.dungeonChests = e.target.checked;

@@ -43,6 +43,9 @@
     // Agahnim and GO sit at the window's edges: open their name tooltips inward.
     '#stk-root .stk-prizes > .item-slot:first-child::before { left:0; transform:none; }',
     '#stk-root .stk-prizes > .item-slot:last-child::before { left:auto; right:0; transform:none; }',
+    '#stk-root .stk-prizes > .item-slot:last-child { margin-right:10px; }',
+    // A dungeon with no small keys (EP) keeps its key row as blank space so its box matches the rest.
+    '#stk-root .key-count-item[style*="display: none"] { display:flex !important; visibility:hidden; }',
     '#stk-root .stat-box.stk-stat { flex-direction:column; justify-content:center; gap:2px; box-sizing:border-box;',
     '  height:40px; min-width:40px; width:auto !important; margin:0 !important; padding:0 4px !important;',
     '  border:1px solid #555; border-radius:6px; }',

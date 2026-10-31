@@ -1206,3 +1206,11 @@ html.dfill-on[data-bg="white"] .dungeon-slot.prize-obtained {
 .boom-half.boom-blue::before { clip-path: polygon(0% 0%, 97% 0%, 0% 97%); }
 .boom-half.boom-red::before  { clip-path: polygon(100% 3%, 100% 100%, 3% 100%); }
 .item-slot.boom-combo.filled .boom-half.got::before { opacity: 0.7; }
+
+/* Y-item proof of concept: outline the item equipped to Y */
+.yitem-equipped { outline: 3px solid #ffd54a; outline-offset: -2px; }
+
+/* Green dot on the dungeon the player is in (item tracker only) */
+/* bottom-right corner of the dungeon square */
+.dng-here-dot { position:absolute; right:2px; bottom:2px; width:8px; height:8px; border-radius:50%; background:#3ddc5a; box-shadow:0 0 0 1px #000; pointer-events:none; z-index:4; }
+

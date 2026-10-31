@@ -126,7 +126,7 @@ let previousSRAM = null;
 // Bumped with every change to this file, relayed in the broadcast snapshot so
 // the map's gear menu can show which build the ITEM TRACKER is running — the
 // two windows are packaged together but reload independently.
-window.ITEMS_BUILD = '1136b';
+window.ITEMS_BUILD = '1136j';
 let _bombClearTimer = null; // debounce: only clear bombs after sustained 0 reading
 
 const items = {
@@ -3088,6 +3088,7 @@ function _broadcastItemSnapNow() {
     snap.deaths = parseInt((document.getElementById('toh-death-count')||{}).textContent||'0');
     snap.bonks  = parseInt((document.getElementById('toh-bonk-count') ||{}).textContent||'0');
     snap.revivals = parseInt((document.getElementById('toh-revival-count')||{}).textContent||'0');   // broadcast Modern v2 style
+    snap.flutes   = parseInt((document.getElementById('toh-flute-count')||{}).textContent||'0');
     snap.raceMode = !!window._raceMode;
     snap.currentDungeon = window._currentDungeon || null;
     snap.currentFloor   = window._currentDungeon ? (window._currentFloor || null) : null;
@@ -4944,4 +4945,53 @@ document.addEventListener('DOMContentLoaded', () => {
     } catch (error) {
         console.error('Error initializing tracker:', error);
     }
+});
+
+// Green dot on the dungeon Link is in (item tracker only). Default on, off in race mode.
+(function () {
+  function dotOn() {
+    if (window._raceMode) return false;
+    var v = localStorage.getItem('alttp-itemtracker-dng-dot');
+    return v === null ? true : v === 'true';
+  }
+  setInterval(function () {
+    document.querySelectorAll('.dng-here-dot').forEach(function (d) { d.remove(); });
+    var key = window._currentDungeon;
+    if (!key || key === 'hc' || key === 'ct' || !dotOn()) return;   // HC and CT have no dungeon box
+    var slot = document.querySelector('.dungeon-slot[data-dungeon-key="' + key + '"]');
+    if (slot) { var d = document.createElement('span'); d.className = 'dng-here-dot'; slot.appendChild(d); }
+  }, 500);
+})();
+
+// Y-item highlight: box the item equipped to Y (read over SNI by js/yitem.js).
+(function () {
+  if (typeof window.yitemWatch !== 'function') return;
+  var Y_KEY = { 1:'bow', 2:'boomerang', 3:'hookshot', 4:'bomb', 5:'powder', 6:'firerod', 7:'icerod',
+    8:'bombos', 9:'ether', 10:'quake', 11:'lamp', 12:'hammer', 13:'flute', 14:'net', 15:'book',
+    17:'somaria', 18:'byrna', 19:'cape', 20:'mirror' };
+  function bottleKey() {
+    return ['bottle1','bottle2','bottle3','bottle4'].filter(function (k) {
+      return items[k] && items[k].currentState > 0; })[0] || null;
+  }
+  window.yitemWatch(function (v) {
+    var key = !window.yitemEnabled() ? null : (v === 16) ? bottleKey() : Y_KEY[v];
+    document.querySelectorAll('.yitem-equipped').forEach(function (el) { el.classList.remove('yitem-equipped'); });
+    if (!key) return;
+    var cell = document.querySelector('[data-item-key="' + key + '"]');
+    // a bottle cell sits inside the 2x2 .bottle-grid: outline the whole square
+    var square = cell && (cell.closest('.item-slot, .bottle-grid') || cell);
+    if (square) square.classList.add('yitem-equipped');
+  });
+})();
+
+// The tallies (checks, deaths, bonks, revivals, flute uses) change without an item
+// changing, so they never reach the Items API through an item snapshot. Watch their
+// counters and push a snapshot when one moves, so /stats stays current.
+document.addEventListener('DOMContentLoaded', () => {
+    const tallyIds = ['toh-check-count', 'toh-death-count', 'toh-bonk-count', 'toh-revival-count', 'toh-flute-count'];
+    const watcher = new MutationObserver(() => { if (window.broadcastItemSnap) window.broadcastItemSnap(); });
+    tallyIds.forEach((id) => {
+        const el = document.getElementById(id);
+        if (el) watcher.observe(el, { childList: true, characterData: true, subtree: true });
+    });
 });

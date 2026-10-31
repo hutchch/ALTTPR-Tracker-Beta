@@ -63,6 +63,8 @@ const API_ITEM_MAX = {
   flute: 2, crystals: 7, mmMedallion: 3, trMedallion: 3,
 };
 const apiItemState = {};
+// Tallies from the same snapshot: checks, deaths, bonks, revivals, flute uses.
+const apiStatState = { checks: 0, deaths: 0, bonks: 0, revivals: 0, flutes: 0 };
 API_CORE_ITEMS.forEach((k) => { apiItemState[k] = 0; });
 // Dungeons exposed by the API (prize, chests, keys, boss state, etc.).
 const API_DUNGEONS = ['ep', 'dp', 'toh', 'pod', 'sp', 'sw', 'tt', 'ip', 'mm', 'tr', 'gt'];
@@ -129,6 +131,18 @@ function buildOpenApiSpec(host, port) {
       },
     };
   });
+  paths['/stats'] = {
+    get: {
+      summary: 'Get the tally counters',
+      operationId: 'getStats',
+      responses: {
+        200: {
+          description: 'Checks, deaths, bonks, revivals and flute uses',
+          content: { 'application/json': { schema: { type: 'object', additionalProperties: { type: 'integer' } } } },
+        },
+      },
+    },
+  };
   paths['/location'] = {
     get: {
       summary: 'Get the dungeon the player is in right now',
@@ -269,6 +283,7 @@ function apiHandleRequest(req, res) {
       + '<li><code>/items/{item}</code> — a single item, e.g. <a href="/items/sword">/items/sword</a></li>'
       + '<li><a href="/dungeons">/dungeons</a> — all dungeon states</li>'
       + '<li><code>/dungeons/{dungeon}</code> — a single dungeon, e.g. <a href="/dungeons/ip">/dungeons/ip</a></li>'
+      + '<li><a href="/stats">/stats</a> — checks, deaths, bonks, revivals, flute uses</li>'
       + '<li><a href="/location">/location</a> — the dungeon the player is in right now (or null)</li>'
       + '<li><a href="/openapi.json">/openapi.json</a> — OpenAPI spec</li>'
       + '</ul></body></html>');
@@ -280,6 +295,10 @@ function apiHandleRequest(req, res) {
     return;
   }
 
+  if (pathname === '/stats' && req.method === 'GET') {
+    apiSend(res, 200, apiStatState);
+    return;
+  }
   if (pathname === '/items' && req.method === 'GET') {
     apiSend(res, 200, apiItemState);
     return;
@@ -963,6 +982,9 @@ ipcMain.on('api-items-update', (event, snap) => {
   if (!snap || typeof snap !== 'object') return;
   API_CORE_ITEMS.forEach((k) => {
     if (typeof snap[k] === 'number') apiItemState[k] = snap[k];
+  });
+  Object.keys(apiStatState).forEach((k) => {
+    if (typeof snap[k] === 'number') apiStatState[k] = snap[k];
   });
   const num = (v) => (typeof v === 'number' ? v : 0);
   API_DUNGEONS.forEach((k) => {
