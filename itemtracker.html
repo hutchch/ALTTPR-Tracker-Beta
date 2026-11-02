@@ -19,6 +19,7 @@
   </div>
   <div class="connection-status" id="item-conn-status">○ Disconnected</div>
   <span class="race-label" id="item-race-label"></span>
+  <span class="mode-label" id="item-goal-label"></span>
   <span class="mode-label" id="item-mode-label"></span>
   <button class="reconnect-btn" id="item-reconnect-btn" title="Reconnect to QUsb2Snes" onclick="manualReconnect()">↻</button>
   <button class="newgame-btn" id="item-newgame-btn" title="Reset to new game" onclick="resetItemTracker()">⟳ New Game</button>
@@ -249,6 +250,8 @@ try {
         window.applyRandomPrizeChange(_v);
       } else if (_k === 'alttp-door-shuffle' && typeof window.applyDoorShuffleChange === 'function') {
         window.applyDoorShuffleChange(_v);
+      } else if (_k === 'alttp-goal') {
+        window.applyGoalChange(_v);
       }
       return;
     }
@@ -317,6 +320,16 @@ try {
     });
   }
 
+  // Goal shown in the bottom bar, from the launcher or the map's setting.
+  var GOAL_NAMES = { ganon: 'Defeat Ganon', pedestal: 'Master Sword Pedestal', dungeons: 'All Dungeons',
+    triforcehunt: 'Triforce Hunt', trinity: 'Trinity', crystals: 'Crystals', ganonhunt: 'Ganonhunt', completionist: 'Completionist' };
+  function setGoalLabel() {
+    var goalLbl = document.getElementById('item-goal-label');
+    var goalKey = localStorage.getItem('alttp-goal') || 'ganon';
+    if (goalLbl) goalLbl.textContent = 'GOAL: ' + (GOAL_NAMES[goalKey] || 'Defeat Ganon').toUpperCase();
+  }
+  window.applyGoalChange = function (v) { try { localStorage.setItem('alttp-goal', v); } catch (e) {} setGoalLabel(); };
+
   // Set mode label in bottom bar
   document.addEventListener('DOMContentLoaded', function() {
     var lbl = document.getElementById('item-mode-label');
@@ -326,6 +339,7 @@ try {
     }
     var raceLbl = document.getElementById('item-race-label');
     if (raceLbl) raceLbl.textContent = window._raceMode ? 'RACE' : '';
+    setGoalLabel();
   });
 
   // Background color — apply data-bg early so there's no flash before the

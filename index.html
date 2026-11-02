@@ -659,6 +659,19 @@ input:focus, select:focus { outline: none; border-color: #4dff88; }
       <span id="other-settings-summary">None</span><span class="osb-caret">&#9660;</span>
       </button>
       <div id="other-settings-panel">
+      <label class="check-row select-row">
+      <span>Goal</span>
+      <select id="goal-select">
+      <option value="ganon" selected>Defeat Ganon</option>
+      <option value="pedestal">Master Sword Pedestal</option>
+      <option value="dungeons">All Dungeons</option>
+      <option value="triforcehunt">Triforce Hunt</option>
+      <option value="trinity">Trinity</option>
+      <option value="crystals">Crystals</option>
+      <option value="ganonhunt">Ganonhunt</option>
+      <option value="completionist">Completionist</option>
+      </select>
+      </label>
       <label class="check-row">
       <input type="checkbox" id="universalkeys-toggle">
       <span>Universal Keys</span>
@@ -1322,6 +1335,23 @@ function applySeedMeta(meta) {
     }
   }
 
+  // Goal — the alttpr meta token is not confirmed against a real seed yet.
+  // Unknown tokens are reported as skipped, not applied.
+  var GOAL_TOKENS = { ganon: 'ganon', dungeons: 'dungeons', pedestal: 'pedestal',
+    triforce_hunt: 'triforcehunt', triforcehunt: 'triforcehunt', trinity: 'trinity', crystals: 'crystals',
+    ganonhunt: 'ganonhunt', completionist: 'completionist' };
+  var goalTok = metaValue(meta, 'goal');
+  if (goalTok !== undefined && goalTok !== null) {
+    var goalStr = String(goalTok).trim().toLowerCase();
+    var goalSelR = document.getElementById('goal-select');
+    if (goalSelR && GOAL_TOKENS[goalStr]) {
+      goalSelR.value = GOAL_TOKENS[goalStr];
+      applied.push('goal ' + goalSelR.options[goalSelR.selectedIndex].text);
+    } else {
+      skipped.push('goal "' + goalStr + '"');
+    }
+  }
+
   // World State Mode — alttpr uses the same tokens as our <option> values.
   var mode = metaValue(meta, 'mode');
   if (mode !== undefined && mode !== null) {
@@ -1621,6 +1651,7 @@ function getSettings() {
     enemizer:   document.getElementById('enemizer-toggle') && document.getElementById('enemizer-toggle').checked ? 'yes' : 'no',
     bossshuffle: document.getElementById('bossshuffle-toggle') && document.getElementById('bossshuffle-toggle').checked ? 'yes' : 'no',
     gtCrystals: document.getElementById('gt-crystals').value || '7',
+    goal:       (document.getElementById('goal-select') || {}).value || 'ganon',
     gamemode:      document.getElementById('gamemode-select') ? document.getElementById('gamemode-select').value : 'standard',
     dungeonItems:  (function () {
       var el = document.getElementById('dungeonitems-select');
@@ -1672,6 +1703,7 @@ function save() {
   localStorage.setItem('alttp-enemizer',    s.enemizer);
   localStorage.setItem('alttp-bossshuffle', s.bossshuffle);
   localStorage.setItem('alttp-gt-crystals', s.gtCrystals);
+  localStorage.setItem('alttp-goal', s.goal);
   localStorage.setItem('alttp-gamemode', s.gamemode);
   localStorage.setItem('alttp-dungeon-items', s.dungeonItems);
   localStorage.setItem('alttp-dungeon-shuffle', s.dungeonShuffle || '');
@@ -1911,6 +1943,10 @@ window.addEventListener('DOMContentLoaded', async function() {
     if (el) el.checked = (v === 'yes');
   });
 
+  // Goal is not part of presets (the reference tracker's presets vary it, and we
+  // don't model it), so it is restored on its own.
+  var goalSel = document.getElementById('goal-select');
+  if (goalSel) goalSel.value = localStorage.getItem('alttp-goal') || 'ganon';
   var logicVal = saved.logicMode || localStorage.getItem('alttp-logic-mode') || 'noglitches';
   var logicSel = document.getElementById('logicmode-select');
   if (logicSel) logicSel.value = logicVal;
