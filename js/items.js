@@ -3907,7 +3907,7 @@ function processRoomData(data) {
                 // at maxSmallKeys: the floor item (0x04) also ticks the SRAM key
                 // counter. HC's key is a floor/enemy drop in the sewers rather than
                 // one of its counted chests, so it is never subtracted.
-                const smallKeys = dungeon.smallKeyMax || dungeon.smallKeyCount;
+                const smallKeys = Math.max(dungeon.smallKeyMax || 0, dungeon.smallKeyCount || 0);
                 items -= dungeon.keysNotInChests ? 0 : Math.min(smallKeys, dungeon.maxSmallKeys);
             }
             if (items < 0) items = 0;
@@ -3923,7 +3923,13 @@ function processRoomData(data) {
             // when the boss-defeat location, or a map/compass bit, is read a frame
             // before its paired chest/prize bit registers. Reset to 0 on New Game
             // (resetItemTracker), so a fresh file still recounts from scratch.
-            items = Math.max(items, dungeon.itemCount || 0);
+            // A key picked up changes the subtraction, so the old high-water would hold
+            // the count from before it. On a read where the key count moved, let the
+            // fresh count stand; the high-water still guards every other read.
+            const keysNow = Math.max(dungeon.smallKeyMax || 0, dungeon.smallKeyCount || 0);
+            if (dungeon._keysSeen === keysNow) items = Math.max(items, dungeon.itemCount || 0);
+            dungeon._keysSeen = keysNow;
+
 
             // Update if changed
             if (items !== dungeon.itemCount) {
