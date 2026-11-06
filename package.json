@@ -1,7 +1,7 @@
 {
   "name": "hutch-alttpr-tracker",
   "productName": "Hutch-ALTTPR Tracker",
-  "version": "1.1.21.1102",
+  "version": "1.1.21.1104.1",
   "description": "A Link to the Past Randomizer item and map tracker with autotracking.",
   "main": "main.js",
   "scripts": {
@@ -21,7 +21,7 @@
   },
   "devDependencies": {
     "electron": "^45.0.0",
-    "electron-builder": "^26.5.0"
+    "electron-builder": "^26.18.0"
   },
   "build": {
     "appId": "com.hutch.alttpr-tracker",
@@ -123,10 +123,12 @@
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true
-    }
+    },
+    "afterAllArtifactBuild": "tools/rename-artifacts.js"
   },
   "allowScripts": {
     "electron-winstaller@5.4.0": true,
-    "electron@41.10.7": true
+    "electron@41.10.7": true,
+    "ejs@2.7.4": true
   }
 }

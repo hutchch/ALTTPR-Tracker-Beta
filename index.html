@@ -1943,8 +1943,7 @@ window.addEventListener('DOMContentLoaded', async function() {
     if (el) el.checked = (v === 'yes');
   });
 
-  // Goal is not part of presets (the reference tracker's presets vary it, and we
-  // don't model it), so it is restored on its own.
+  // Goal is restored on its own; a preset sets it when applied (applyPresetSettings).
   var goalSel = document.getElementById('goal-select');
   if (goalSel) goalSel.value = localStorage.getItem('alttp-goal') || 'ganon';
   var logicVal = saved.logicMode || localStorage.getItem('alttp-logic-mode') || 'noglitches';
@@ -2253,6 +2252,7 @@ var PRESET_STORAGE_KEY = 'alttp-custom-presets'; // { name: settingsObj }
 var BUILTIN_PRESETS = {
   lordseed: {
     label: 'Lord Seed',
+    goal: 'ganon',
     dungeonItems: 'standard',
     gtCrystals: '7',
     gamemode: 'standard',
@@ -2266,6 +2266,7 @@ var BUILTIN_PRESETS = {
   },
   standard: {
     label: 'Standard',
+    goal: 'ganon',
     dungeonItems: 'standard',
     gtCrystals: '7',
     gamemode: 'standard',
@@ -2279,6 +2280,7 @@ var BUILTIN_PRESETS = {
   },
   openstandard: {
     label: 'Open Standard',
+    goal: 'ganon',
     dungeonItems: 'standard',
     gtCrystals: '7',
     gamemode: 'open',
@@ -2292,6 +2294,7 @@ var BUILTIN_PRESETS = {
   },
   standardkeysanity: {
     label: 'Standard KeySanity',
+    goal: 'ganon',
     dungeonItems: 'keysanity',
     gtCrystals: '7',
     gamemode: 'standard',
@@ -2305,6 +2308,7 @@ var BUILTIN_PRESETS = {
   },
   openkeysanity: {
     label: 'Open KeySanity',
+    goal: 'ganon',
     dungeonItems: 'keysanity',
     dungeonShuffle: 'mcbk',
     gtCrystals: '7',
@@ -2320,11 +2324,11 @@ var BUILTIN_PRESETS = {
   // ── Community presets, taken from the reference tracker's own definitions ──
   // Read straight out of its bundle (Sep 2026), so the settings are its, not a
   // guess. Everything it varies that the tracker doesn't model is dropped,
-  // because none of it changes logic or counts: the goal (Ganon / fast Ganon /
-  // All Dungeons / hunts), starting items and assured swords, activated flute,
+  // because none of it changes logic or counts: starting items and assured swords, activated flute,
   // ambrosia, follower and bonk shuffle, door and overworld shuffle.
   cabookey: {
     label: 'Cabookey',
+    goal: 'dungeons',
     dungeonItems: 'keysanity',
     dungeonShuffle: 'mcbk',
     gtCrystals: '7',
@@ -2339,6 +2343,7 @@ var BUILTIN_PRESETS = {
   },
   cabookeydrop: {
     label: 'Cabookeydrop',
+    goal: 'dungeons',
     dungeonItems: 'keysanity',
     dungeonShuffle: 'mcbk',
     gtCrystals: '7',
@@ -2353,6 +2358,7 @@ var BUILTIN_PRESETS = {
   },
   adenemizer: {
     label: 'AD Enemizer',
+    goal: 'dungeons',
     dungeonItems: 'standard',
     dungeonShuffle: '',
     gtCrystals: '7',
@@ -2367,6 +2373,7 @@ var BUILTIN_PRESETS = {
   },
   adkeysanity: {
     label: 'AD Keysanity',
+    goal: 'dungeons',
     dungeonItems: 'keysanity',
     dungeonShuffle: 'mcbk',
     gtCrystals: '7',
@@ -2381,6 +2388,7 @@ var BUILTIN_PRESETS = {
   },
   adkeydropshop: {
     label: 'AD Keydrop Shop',
+    goal: 'dungeons',
     dungeonItems: 'keysanity',
     dungeonShuffle: 'mcbk',
     gtCrystals: '7',
@@ -2396,6 +2404,7 @@ var BUILTIN_PRESETS = {
   },
   open47keys: {
     label: '4/7 Open Keys',
+    goal: 'ganon',
     dungeonItems: 'keysanity',
     dungeonShuffle: 'mcbk',
     gtCrystals: '4',
@@ -2410,6 +2419,7 @@ var BUILTIN_PRESETS = {
   },
   mcshuffle: {
     label: 'MC Shuffle',
+    goal: 'ganon',
     dungeonItems: 'mapcompass',
     dungeonShuffle: 'mc',
     gtCrystals: '7',
@@ -2936,6 +2946,8 @@ function dshufWire() {
 function applyPresetSettings(cfg) {
   if (!cfg) return;
   autotrackOff();
+  var goalEl = document.getElementById('goal-select');
+  if (goalEl && cfg.goal !== undefined) goalEl.value = cfg.goal;   // presets without one leave it alone
   var disel = document.getElementById('dungeonitems-select');
   if (disel && cfg.dungeonItems !== undefined) {
     disel.value = cfg.dungeonItems;
@@ -3033,6 +3045,7 @@ function captureCurrentSettings() {
     pottery:      potteryValue(),
     enemyDrop:    enemyDropValue(),
     logicMode:    (document.getElementById('logicmode-select') || {}).value || 'noglitches',
+    goal:         (document.getElementById('goal-select') || {}).value || 'ganon',
   };
   // The Other Settings menu, from the one list that defines it — so adding a
   // seventh flag there carries it into custom presets for free.
