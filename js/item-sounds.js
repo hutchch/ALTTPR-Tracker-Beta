@@ -61,6 +61,8 @@
       if (!(now > was)) return;
       if ((k === 'flute' || k === 'mushroom') && was > 0) return;   // progression, not a pickup
       if (BOTTLES.indexOf(k) !== -1 && BOTTLES.some(function (o) { return o !== k && (a[o] || 0) > 0; })) return;
+      // Boomerangs are 1 blue, 2 red, 3 both: play the half just found.
+      if (k === 'boomerang') { var got = now & ~was; out.push([k, got === 1 || got === 2 ? got : undefined]); return; }
       out.push([k, now]);
     });
     if (b.gomode === 1 && a.gomode !== 1) out.push(['gomode']);
