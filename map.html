@@ -7211,26 +7211,16 @@ var POT_PLACE_USE_CHECK = {
   'Superbunny Cave (Bottom)': 1
 };
 
-// Doors the entrance graph is stricter about than the pots actually are,
-// because the table models the entrance-shuffle route rather than the walk-in
-// one: Death Mountain Return Cave's West door is listed as
-// mirror-from-Bumper-Cave, when on a vanilla seed you walk in from the ledge
-// exactly as you do at Old Man House's top door.
-//
-// Applied only while entrance shuffle is OFF — with it on, "can I get to that
-// door" really is the question the table answers, and a found entrance is the
-// whole point.
-var POT_REACH_VIA = {
-  'Death Mountain Return Cave (West)': 'Old Man House (Top)'
-};
-
 // Doors that take a check's colour outright, purple included. Fairy
 // Ascension is the same stretch of east Death Mountain as Paradox Cave; the
 // entrance graph made it wait on the flute when west DM access was enough
 // (Chris, Sep 2026).
 var POT_REACH_CHECK = {
   'Fairy Ascension Cave (Top)':    17,   // Paradox Cave
-  'Fairy Ascension Cave (Bottom)': 17
+  'Fairy Ascension Cave (Bottom)': 17,
+  // Paradox Cave's Bomb Area and Front pots open through this door; the entrance
+  // graph wants the flute, but the cave's own checks say available (Chris, Nov 2026).
+  'Paradox Cave (Bottom)':         17
 };
 var POT_UNREACH = { word: 'unavailable', cls: 'unavail' };
 
@@ -7243,10 +7233,20 @@ function potReachStatus(name) {
   return potEntranceReachable(name) ? { word: 'available', cls: 'available' } : POT_UNREACH;
 }
 
+// With entrance shuffle off, the Old Man doors are reached the way the map reaches
+// Death Mountain everywhere else: gloves climb it (open world), or a flute.
+// The entrance graph only knows the flute, so these pots read red with gloves and a lamp.
+var POT_DM_DOOR = { 'Old Man House (Bottom)': 1, 'Old Man House (Top)': 1, 'Old Man Cave (East)': 1,
+  'Death Mountain Return Cave (East)': 1, 'Death Mountain Return Cave (West)': 1,
+  'Hookshot Fairy': 1 };
+
 function potEntranceReachable(name) {
   if (!(window.trackerSettings && window.trackerSettings.entranceShuffle)) {
     if (POT_REACH_CHECK[name] !== undefined) return potReachStatus(name).cls !== 'unavail';
-    name = POT_REACH_VIA[name] || name;
+    if (POT_DM_DOOR[name]) {
+      var dmIt = window.trackerItems || {};
+      return !!((dmIt.gloves >= 1 && window.gloveClimbsDM()) || dmIt.flute >= 2 || window.fluteToDDM());
+    }
   }
   if (_potReachCache[name] !== undefined) return _potReachCache[name];
   return (_potReachCache[name] = _potEntranceReachable(name));

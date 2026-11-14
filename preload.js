@@ -29,6 +29,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   saveBcastBgImage:  (dataUrl) => ipcRenderer.invoke('save-bcast-bg-image', dataUrl),
   clearBcastBgImage: ()        => ipcRenderer.invoke('clear-bcast-bg-image'),
   sendApiItems: (snap) => ipcRenderer.send('api-items-update', snap),
+  debugLog:     (line) => ipcRenderer.send('debug-log', line),
   sendApiConnection: (info) => ipcRenderer.send('api-connection-status', info),
   onUpdateStatus:  (cb) => ipcRenderer.on('update-status', (_e, data) => cb(data)),
   sniStatus:       ()   => ipcRenderer.invoke('sni-status'),

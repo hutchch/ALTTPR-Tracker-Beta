@@ -72,6 +72,9 @@ window.POT_REQS = [0,
   // 22 — the boots, in a Dark World room: Hookshot Cave's bonk islands are a
   // dash away when you have no hookshot (Chris, Sep 2026).
   ["boots+moonpearl","boots"],
+  // 23 — Mire Hint's six pots: the Dark World room needs the flute activated as
+  // well as what the pot already asks for (Chris, Nov 2026).
+  ["bomb+moonpearl+fluteActive","bomb+fluteActive"],
 ];
 window.POT_LOCATIONS = {
   0: { name: "Pyramid", dng: null },
@@ -267,7 +270,7 @@ window.POT_LOCATIONS = {
   251: { name: "Bumper Cave (bottom)", dng: null, drops: [[0x447,0x40,"Enemy #2",0,2], [0x447,0x20,"Enemy #3",0,2]] },
   253: { name: "Fairy Ascension Cave (Top)", dng: null, pots: [[0x1fb,0x80,"Pot #1",0,1], [0x1fb,0x40,"Pot #2",0,1], [0x1fb,0x20,"Pot #3",0,1,"Fairy Ascension Cave (Bottom)"], [0x1fb,0x10,"Pot #4",0,1,"Fairy Ascension Cave (Bottom)"]], drops: [[0x44b,0x80,"Enemy #1",0,1,"Fairy Ascension Cave (Bottom)"], [0x44b,0x40,"Enemy #2",0,1,"Fairy Ascension Cave (Bottom)"], [0x44b,0x08,"Enemy #5",0,1,"Fairy Ascension Cave (Bottom)"]] },
   254: { name: "Spiral Cave (Bottom)", dng: null, drops: [[0x44d,0x80,"Enemy #1",0,1], [0x44d,0x40,"Enemy #2",0,1], [0x44d,0x20,"Enemy #3",0,1], [0x44d,0x10,"Enemy #4",0,1], [0x44d,0x08,"Enemy #5",0,1]] },
-  255: { name: "Paradox Cave Bomb Area", dng: null, pots: [[0x1ff,0x80,"Pot #1",0,1], [0x1ff,0x40,"Pot #2",0,1], [0x1ff,0x20,"Pot #3",0,1,"Paradox Cave Front"]] },
+  255: { name: "Paradox Cave Bomb Area", dng: null, pots: [[0x1ff,0x80,"Pot #1",0,20], [0x1ff,0x40,"Pot #2",0,20], [0x1ff,0x20,"Pot #3",0,1,"Paradox Cave Front"]] },
   257: { name: "Snitch Lady (East)", dng: null, pots: [[0x203,0x80,"Pot #1",0,1], [0x203,0x40,"Pot #2",0,1,"Snitch Lady (West)"], [0x203,0x20,"Pot #3",0,1,"Snitch Lady (West)"]] },
   258: { name: "Sick Kids House", dng: null, pots: [[0x205,0x80,"Pot #1",0,1], [0x205,0x40,"Pot #2",0,1]] },
   259: { name: "Tavern", dng: null, pots: [[0x207,0x80,"Pot #1",0,1], [0x207,0x40,"Pot #2",0,1], [0x207,0x20,"Pot #3",0,1,"Tavern (Front)"]] },
@@ -279,7 +282,7 @@ window.POT_LOCATIONS = {
   267: { name: "Dam", dng: null },
   268: { name: "Hookshot Fairy", dng: null, pots: [[0x219,0x80,"Pot #1",0,15]], drops: [[0x469,0x08,"Enemy #5",0,1,"Mimic Cave"], [0x469,0x04,"Enemy #6",0,1,"Mimic Cave"], [0x469,0x02,"Enemy #7",0,1,"Mimic Cave"], [0x469,0x01,"Enemy #8",0,1,"Mimic Cave"]] },
   269: { name: "Mire Shed", dng: "mm", drops: [[0x46b,0x80,"Enemy #1"], [0x46b,0x40,"Enemy #2"]] },
-  276: { name: "Mire Hint", dng: null, pots: [[0x229,0x80,"Pot #1",0,16], [0x229,0x40,"Pot #2",0,16], [0x229,0x20,"Pot #3",0,16], [0x229,0x10,"Pot #4",0,16], [0x229,0x08,"Pot #5",0,16], [0x229,0x04,"Pot #6",0,16]] },
+  276: { name: "Mire Hint", dng: null, pots: [[0x229,0x80,"Pot #1",0,23], [0x229,0x40,"Pot #2",0,23], [0x229,0x20,"Pot #3",0,23], [0x229,0x10,"Pot #4",0,23], [0x229,0x08,"Pot #5",0,23], [0x229,0x04,"Pot #6",0,23]] },
   277: { name: "None", dng: null },
   279: { name: "Spike Cave", dng: null, pots: [[0x22f,0x80,"Pot #1",0,17], [0x22f,0x40,"Pot #2",0,17], [0x22f,0x20,"Pot #3",0,17], [0x22f,0x10,"Pot #4",0,17], [0x22f,0x08,"Pot #5",0,17], [0x22f,0x04,"Pot #6",0,17], [0x22f,0x02,"Pot #7",0,17], [0x22f,0x01,"Pot #8",0,17], [0x22e,0x80,"Spike Cave Large Block",0,18,"Spike Cave Large Block"]] },
   281: { name: "Blinds Hideout", dng: null, pots: [[0x233,0x80,"Pot #1",0,1], [0x233,0x40,"Pot #2",0,1], [0x233,0x20,"Pot #3",0,1], [0x233,0x10,"Pot #4",0,1]] },

@@ -2213,6 +2213,7 @@ function potToken(t) {
   var it = potItems();
   switch (t.split('|')[0]) {
     case 'moonpearl':  return !!it.moonpearl;
+    case 'fluteActive': return (it.flute || 0) >= 2;   // flute activated, not just found
     case 'lantern':    return !!it.lamp;
     case 'hammer':     return !!it.hammer;
     case 'glove':      return (it.gloves || 0) >= 1;

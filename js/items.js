@@ -588,6 +588,7 @@ window.setDungeonPrize = function(key, name) {
     var idx = window.PRIZE_IMAGE_CYCLE.indexOf(name + '0.png');
     if (idx < 0 || !dungeons[key]) return;
     dungeons[key].prizeState = idx;
+    dbgLog('prize set ' + key + ' ' + name + ' idx=' + idx);
     var slot = document.querySelector('[data-dungeon-key="' + key + '"]');
     var prizeImg = slot && slot.querySelector('.prize-img');
     if (prizeImg) prizeImg.src = (typeof BASE_URL !== 'undefined' ? BASE_URL + '/' : '') + window.PRIZE_IMAGE_CYCLE[idx];
@@ -1808,6 +1809,7 @@ function _resetKeyDropTallies() {
         if (typeof deviceAttached !== 'undefined' && deviceAttached) {
             dungeons[k].chestsMax = 0;
             dungeons[k].chestBits = 0;   // travels with chestsMax — see below
+            dungeons[k]._keysCredited = 0; dungeons[k]._keysPrev = 0; dungeons[k]._chestPend = 0; dungeons[k]._keyPend = 0; dungeons[k].floorMax = 0;
             dungeons[k].itemCount = 0;
         }
     });
@@ -3646,6 +3648,26 @@ function processFloor(b) {
     if (window.broadcastItemSnap) window.broadcastItemSnap();
 }
 
+// The room and inventory reads come back as separate responses, and the dungeon
+// count uses both. A small key ticks in the inventory read a poll before the
+// chest it came from shows in the room read, so the count dipped and recovered.
+// Process the two as a pair, inventory first, so both move in the same update.
+// A read with no partner still goes through after 1.5 s.
+var _pendRoom = null, _pendInv = null, _pendTimer = null;
+function _queueRead(kind, data) {
+    if (kind === 'inv') _pendInv = data; else _pendRoom = data;
+    if (_pendInv && _pendRoom) return _flushReads();
+    clearTimeout(_pendTimer);
+    _pendTimer = setTimeout(_flushReads, 1500);
+}
+function _flushReads() {
+    clearTimeout(_pendTimer); _pendTimer = null;
+    var inv = _pendInv, room = _pendRoom;
+    _pendInv = _pendRoom = null;
+    if (inv) processInventoryData(inv);
+    if (room) processRoomData(room);
+}
+
 function processSRAMData(data) {
     if (data.length === 0x01) {
         _currentGamemode = data[0];
@@ -3657,7 +3679,7 @@ function processSRAMData(data) {
     } else if (data.length === 0x04) {
         processWorld(data[0]);
     } else if (data.length === 0x1ae) {
-        processInventoryData(data);
+        _queueRead('inv', data);
     } else if (data.length === 0x280) {
         const now = Date.now();
         if (roomChunk1 === null || (now - roomChunk1Time) > 1500) {
@@ -3671,7 +3693,7 @@ function processSRAMData(data) {
             merged.set(data, 0x280);
             roomChunk1 = null;
             roomChunk1Time = 0;
-            processRoomData(merged);
+            _queueRead('room', merged);
         }
     } else if (data.length === KEYDROP_LEN) {
         processKeyDropData(data);
@@ -3682,7 +3704,7 @@ function processSRAMData(data) {
     } else if (data.length === ROM_PRIZE_LEN) {
         takePrizeTable(data);
     } else if (data.length === 0x400 || data.length === 0x420 || data.length === 0x500) {
-        processRoomData(data);
+        _queueRead('room', data);
     }
 }
 
@@ -3775,6 +3797,17 @@ function processSeedCounts(data) {
     if (window.broadcastItemSnap) window.broadcastItemSnap();
 }
 
+// Debug log: does nothing unless localStorage 'alttp-debug-log' is 'yes'. In the
+// app the line is appended to ~/Documents/ALTTPR-Tracker-debug.log (main.js).
+function dbgLog(msg) {
+    try { if (localStorage.getItem('alttp-debug-log') !== 'yes') return; } catch (e) { return; }
+    // Local time, sortable (2026-11-13T07:58:12.345), so it lines up with the player's clock.
+    const d = new Date();
+    const line = d.toLocaleString('sv-SE').replace(' ', 'T') + '.' + String(d.getMilliseconds()).padStart(3, '0') + ' ' + msg;
+    console.log('[DBG] ' + line);
+    if (window.electronAPI && window.electronAPI.debugLog) window.electronAPI.debugLog(line);
+}
+
 function processRoomData(data) {
     // A save & quit blanks the room-flag block for a moment; merge it with what
     // we already had so the chest counts don't drop and come back.
@@ -3824,6 +3857,7 @@ function processRoomData(data) {
         // Track chests using [room, bitmask] locations
         if (dungeon.locations) {
             let chestsOpened = 0;
+            let floorOpened = 0;   // DP torch, ToH basement, GT torch: see the key credit below
             
             for (const [room, bitmask] of dungeon.locations) {
                 // For floor item locations (0x04): check both the floor pickup flag AND
@@ -3831,8 +3865,11 @@ function processRoomData(data) {
                 const effectiveMask = (bitmask === 0x04) ? (0x04 | 0x10) : bitmask;
                 if (room < data.length && (data[room] & effectiveMask) !== 0) {
                     chestsOpened++;
+                    if (bitmask === 0x04) floorOpened++;
                 }
             }
+            const _floorRise = Math.max(0, floorOpened - (dungeons[key].floorMax || 0));
+            dungeons[key].floorMax = Math.max(floorOpened, dungeons[key].floorMax || 0);
 
             // Key drop shuffle: pot keys and enemy drops are locations too, but
             // their bits come from a different SRAM block, so they're counted
@@ -3871,6 +3908,9 @@ function processRoomData(data) {
             }
 
             // High-water mark: chest count never goes down (handles flickering SRAM on BizHawk etc.)
+            // A real new chest raises the count above its high-water mark. Returning
+            // to the dungeon restores the mark, which is not a chest (see keys below).
+            const _maxBefore = dungeons[key].chestsMax || 0;
             chestsOpened = Math.max(chestsOpened, dungeons[key].chestsMax || 0);
             dungeons[key].chestsMax = chestsOpened;
             
@@ -3897,6 +3937,43 @@ function processRoomData(data) {
             // item UNLESS it held one of this dungeon's own unshuffled items.
             // `slots` says whether the dungeon HAS each one; the state says
             // whether it has been found yet. Both are needed.
+            // Only keys that came out of a chest are unshuffled items here. A key
+            // from a pot or enemy drop ticks the key counter with no chest change,
+            // so it is not credited: counting it dropped the total until the boss.
+            // A key rise in the same read as a chest rise is a chest key.
+            const keysHeld = Math.max(dungeon.smallKeyMax || 0, dungeon.smallKeyCount || 0);
+            const _chestRise = chestsOpened - _maxBefore;
+            const _keyRise = keysHeld - (dungeon._keysPrev || 0);
+            // The key counter can land one read after its chest (POD, Nov 2026: chest at
+            // 12:05:23, key at 12:05:24, never credited, count one high). A chest with no
+            // key waits about one read (1.5 s); a key rise in that window is that chest's key.
+            // shortcut: a drop key grabbed within 1.5 s of a non-key chest is credited too
+            // (count one low); widen the rule only if that shows up in a log.
+            const _now = Date.now();
+            if (dungeon._chestPendAt && _now - dungeon._chestPendAt > 1500) dungeon._chestPend = 0;
+            let _openChests = _chestRise + (dungeon._chestPend || 0);
+            let _keysLeft = _keyRise;
+            if (_keysLeft > 0 && _openChests > 0) {
+                const _c = Math.min(_keysLeft, _openChests);
+                dungeon._keysCredited = Math.min((dungeon._keysCredited || 0) + _c, keysHeld);
+                _openChests -= _c;
+                _keysLeft -= _c;
+            }
+            // Floor items go the other way: the key counter ticks first and the location
+            // bit lands later (DP torch, Nov 2026: key 06:42:59.4, bit 06:43:01.4). Only
+            // these locations look back for a key, so Misery Mire and the rest are untouched.
+            // shortcut: a drop key picked up within 2.5 s before a non-key floor item is
+            // credited too (count one low); revisit if a log shows it.
+            if (dungeon._keyPendAt && _now - dungeon._keyPendAt > 2500) dungeon._keyPend = 0;
+            if (_floorRise > 0 && _openChests > 0 && dungeon._keyPend > 0) {
+                dungeon._keysCredited = Math.min((dungeon._keysCredited || 0) + 1, keysHeld);
+                _openChests -= 1;
+                dungeon._keyPend = 0;
+            }
+            if (_keysLeft > 0) { dungeon._keyPend = 1; dungeon._keyPendAt = _now; }
+            if (_chestRise > 0) dungeon._chestPendAt = _now;
+            dungeon._chestPend = Math.min(_openChests, 1);
+            dungeon._keysPrev = keysHeld;
             let items = chestsOpened;
             if (!diFlags.map     && slots.map     && dungeon.mapState     > 0) items--;
             if (!diFlags.compass && slots.compass && dungeon.compassState > 0) items--;
@@ -3907,7 +3984,7 @@ function processRoomData(data) {
                 // at maxSmallKeys: the floor item (0x04) also ticks the SRAM key
                 // counter. HC's key is a floor/enemy drop in the sewers rather than
                 // one of its counted chests, so it is never subtracted.
-                const smallKeys = Math.max(dungeon.smallKeyMax || 0, dungeon.smallKeyCount || 0);
+                const smallKeys = dungeon._keysCredited || 0;
                 items -= dungeon.keysNotInChests ? 0 : Math.min(smallKeys, dungeon.maxSmallKeys);
             }
             if (items < 0) items = 0;
@@ -3930,6 +4007,18 @@ function processRoomData(data) {
             if (dungeon._keysSeen === keysNow) items = Math.max(items, dungeon.itemCount || 0);
             dungeon._keysSeen = keysNow;
 
+
+            // Debug log: one line whenever this dungeon's state changes.
+            const _slot = document.querySelector(`[data-dungeon-key="${key}"]`);
+            const _pi = _slot && _slot.querySelector('.prize-img');
+            const _boss = dungeon.bossAddr ? ((data[dungeon.bossAddr] & 0x08) !== 0 ? 1 : 0) : 'n/a';
+            const _line = [key, 'boss=' + _boss, 'prizeImg=' + (_pi ? _pi.src.split('/').pop() : 'none'),
+                'prizeState=' + dungeon.prizeState, 'auto=' + !!dungeon._prizeAuto,
+                'chestsOpened=' + chestsOpened, 'map=' + dungeon.mapState, 'compass=' + dungeon.compassState,
+                'bigkey=' + dungeon.bigkeyState, 'keysMax=' + dungeon.smallKeyMax, 'keysNow=' + dungeon.smallKeyCount,
+                'maxItems=' + dungeon.maxItems, 'items=' + items, 'itemCount=' + dungeon.itemCount,
+                'chestsMax=' + dungeon.chestsMax, 'maxBefore=' + _maxBefore, 'chestRise=' + _chestRise, 'keyRise=' + _keyRise, 'credited=' + (dungeon._keysCredited || 0), 'diFlags=' + JSON.stringify(diFlags)].join(' ');
+            if (_line !== dungeon._dbgLast) { dungeon._dbgLast = _line; dbgLog('dungeon ' + _line); }
 
             // Update if changed
             if (items !== dungeon.itemCount) {
@@ -4708,6 +4797,7 @@ function resetItemTracker() {
         d.itemCount     = 0;
         d.chestsMax     = 0;
         d.chestBits     = 0;
+        d._keysCredited = 0; d._keysPrev = 0; d._chestPend = 0; d._keyPend = 0; d.floorMax = 0;
         d.skipped       = 0;
         d.bigkeyState   = 0;
         d.compassState  = 0;

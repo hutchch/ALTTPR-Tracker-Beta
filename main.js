@@ -978,6 +978,10 @@ function openCheckList() {
 
 // ── IPC ───────────────────────────────────────────────────────────────────────
 // ItemTracker pushes its latest item snapshot here; update the read-only mirror.
+// Debug log written by the item tracker when localStorage 'alttp-debug-log' is 'yes'.
+ipcMain.on('debug-log', (event, line) => {
+  try { fs.appendFileSync(path.join(app.getPath('documents'), 'ALTTPR-Tracker-debug.log'), String(line) + '\n'); } catch (e) {}
+});
 ipcMain.on('api-items-update', (event, snap) => {
   if (!snap || typeof snap !== 'object') return;
   API_CORE_ITEMS.forEach((k) => {
