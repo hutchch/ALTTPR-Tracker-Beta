@@ -1809,7 +1809,7 @@ function _resetKeyDropTallies() {
         if (typeof deviceAttached !== 'undefined' && deviceAttached) {
             dungeons[k].chestsMax = 0;
             dungeons[k].chestBits = 0;   // travels with chestsMax — see below
-            dungeons[k]._keysCredited = 0; dungeons[k]._keysPrev = 0; dungeons[k]._chestPend = 0; dungeons[k]._keyPend = 0; dungeons[k].floorMax = 0;
+            dungeons[k]._keysPrev = 0;
             dungeons[k].itemCount = 0;
         }
     });
@@ -3857,7 +3857,6 @@ function processRoomData(data) {
         // Track chests using [room, bitmask] locations
         if (dungeon.locations) {
             let chestsOpened = 0;
-            let floorOpened = 0;   // DP torch, ToH basement, GT torch: see the key credit below
             
             for (const [room, bitmask] of dungeon.locations) {
                 // For floor item locations (0x04): check both the floor pickup flag AND
@@ -3865,11 +3864,8 @@ function processRoomData(data) {
                 const effectiveMask = (bitmask === 0x04) ? (0x04 | 0x10) : bitmask;
                 if (room < data.length && (data[room] & effectiveMask) !== 0) {
                     chestsOpened++;
-                    if (bitmask === 0x04) floorOpened++;
                 }
             }
-            const _floorRise = Math.max(0, floorOpened - (dungeons[key].floorMax || 0));
-            dungeons[key].floorMax = Math.max(floorOpened, dungeons[key].floorMax || 0);
 
             // Key drop shuffle: pot keys and enemy drops are locations too, but
             // their bits come from a different SRAM block, so they're counted
@@ -3937,42 +3933,15 @@ function processRoomData(data) {
             // item UNLESS it held one of this dungeon's own unshuffled items.
             // `slots` says whether the dungeon HAS each one; the state says
             // whether it has been found yet. Both are needed.
-            // Only keys that came out of a chest are unshuffled items here. A key
-            // from a pot or enemy drop ticks the key counter with no chest change,
-            // so it is not credited: counting it dropped the total until the boss.
-            // A key rise in the same read as a chest rise is a chest key.
+            // Every key held is subtracted, whenever it arrived (the rule before Nov 2026).
+            // Crediting only keys that came with a chest (1144k-1151k) depended on the
+            // game's timing, which varies: a torch key lands 2-4 s before its flag, a boss
+            // key 16-19 s before. Each gap overcounted. A pot or enemy key can still dip the
+            // count by one until the dungeon is done; an overcount is worse.
+            // keyRise/chestRise are kept for the debug log only.
             const keysHeld = Math.max(dungeon.smallKeyMax || 0, dungeon.smallKeyCount || 0);
             const _chestRise = chestsOpened - _maxBefore;
             const _keyRise = keysHeld - (dungeon._keysPrev || 0);
-            // The key counter can land one read after its chest (POD, Nov 2026: chest at
-            // 12:05:23, key at 12:05:24, never credited, count one high). A chest with no
-            // key waits about one read (1.5 s); a key rise in that window is that chest's key.
-            // shortcut: a drop key grabbed within 1.5 s of a non-key chest is credited too
-            // (count one low); widen the rule only if that shows up in a log.
-            const _now = Date.now();
-            if (dungeon._chestPendAt && _now - dungeon._chestPendAt > 1500) dungeon._chestPend = 0;
-            let _openChests = _chestRise + (dungeon._chestPend || 0);
-            let _keysLeft = _keyRise;
-            if (_keysLeft > 0 && _openChests > 0) {
-                const _c = Math.min(_keysLeft, _openChests);
-                dungeon._keysCredited = Math.min((dungeon._keysCredited || 0) + _c, keysHeld);
-                _openChests -= _c;
-                _keysLeft -= _c;
-            }
-            // Floor items go the other way: the key counter ticks first and the location
-            // bit lands later (DP torch, Nov 2026: key 06:42:59.4, bit 06:43:01.4). Only
-            // these locations look back for a key, so Misery Mire and the rest are untouched.
-            // shortcut: a drop key picked up within 2.5 s before a non-key floor item is
-            // credited too (count one low); revisit if a log shows it.
-            if (dungeon._keyPendAt && _now - dungeon._keyPendAt > 2500) dungeon._keyPend = 0;
-            if (_floorRise > 0 && _openChests > 0 && dungeon._keyPend > 0) {
-                dungeon._keysCredited = Math.min((dungeon._keysCredited || 0) + 1, keysHeld);
-                _openChests -= 1;
-                dungeon._keyPend = 0;
-            }
-            if (_keysLeft > 0) { dungeon._keyPend = 1; dungeon._keyPendAt = _now; }
-            if (_chestRise > 0) dungeon._chestPendAt = _now;
-            dungeon._chestPend = Math.min(_openChests, 1);
             dungeon._keysPrev = keysHeld;
             let items = chestsOpened;
             if (!diFlags.map     && slots.map     && dungeon.mapState     > 0) items--;
@@ -3984,7 +3953,7 @@ function processRoomData(data) {
                 // at maxSmallKeys: the floor item (0x04) also ticks the SRAM key
                 // counter. HC's key is a floor/enemy drop in the sewers rather than
                 // one of its counted chests, so it is never subtracted.
-                const smallKeys = dungeon._keysCredited || 0;
+                const smallKeys = keysHeld;
                 items -= dungeon.keysNotInChests ? 0 : Math.min(smallKeys, dungeon.maxSmallKeys);
             }
             if (items < 0) items = 0;
@@ -4017,7 +3986,7 @@ function processRoomData(data) {
                 'chestsOpened=' + chestsOpened, 'map=' + dungeon.mapState, 'compass=' + dungeon.compassState,
                 'bigkey=' + dungeon.bigkeyState, 'keysMax=' + dungeon.smallKeyMax, 'keysNow=' + dungeon.smallKeyCount,
                 'maxItems=' + dungeon.maxItems, 'items=' + items, 'itemCount=' + dungeon.itemCount,
-                'chestsMax=' + dungeon.chestsMax, 'maxBefore=' + _maxBefore, 'chestRise=' + _chestRise, 'keyRise=' + _keyRise, 'credited=' + (dungeon._keysCredited || 0), 'diFlags=' + JSON.stringify(diFlags)].join(' ');
+                'chestsMax=' + dungeon.chestsMax, 'maxBefore=' + _maxBefore, 'chestRise=' + _chestRise, 'keyRise=' + _keyRise, 'diFlags=' + JSON.stringify(diFlags)].join(' ');
             if (_line !== dungeon._dbgLast) { dungeon._dbgLast = _line; dbgLog('dungeon ' + _line); }
 
             // Update if changed
@@ -4797,7 +4766,7 @@ function resetItemTracker() {
         d.itemCount     = 0;
         d.chestsMax     = 0;
         d.chestBits     = 0;
-        d._keysCredited = 0; d._keysPrev = 0; d._chestPend = 0; d._keyPend = 0; d.floorMax = 0;
+        d._keysPrev = 0;
         d.skipped       = 0;
         d.bigkeyState   = 0;
         d.compassState  = 0;
