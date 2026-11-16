@@ -58,6 +58,12 @@ body {
 
 /* ── Settings menu (gear → dropdown panel) ── */
 #settings-wrap { position: relative; margin-left: auto; }
+/* The seed goal, left of Settings (moved from the item tracker, Nov 2026). It
+   takes the push to the right, so Settings sits right beside it. */
+#goal-label { margin-left: auto; margin-right: 10px; color: #888; font-size: 11px; font-weight: bold; letter-spacing: .5px; }
+#goal-label:empty { display: none; }
+#goal-label:not(:empty) ~ #settings-wrap { margin-left: 0; }
+#topbar.ent-rows #goal-label { order: 1; }
 #settings-btn {
   background: #1a1a1a; color: #ccc; border: 1px solid #333;
   border-radius: 3px; padding: 0 8px; font-size: 11px; line-height: 1.7;
@@ -672,6 +678,7 @@ body {
   <button class="zoom-btn" id="checklist-btn" style="font-size:11px;padding:0 8px;" onclick="openCheckList()">☑ Checks</button>
 
   <span class="tb-break"></span>
+  <span id="goal-label" title="Seed goal (Settings → Goal)"></span>
   <div id="settings-wrap">
     <button id="settings-btn" type="button" title="Map settings">&#9881; Settings</button>
     <div id="settings-panel">
@@ -9302,13 +9309,28 @@ if (document.readyState === 'loading') {
   window.applyGtCrystals = applyGtCrystals;
 
   // ── Goal ──
-  // Launcher and map share 'alttp-goal'. Changing it here relays to the item
-  // tracker, which shows it in the bottom bar.
+  // Launcher and map share 'alttp-goal'. Shown in the toolbar, left of Settings.
+  function updateGoalLabel() {
+    var el = document.getElementById('goal-label'), sel = document.getElementById('set-goal');
+    if (!el || !sel) return;
+    var v = localStorage.getItem('alttp-goal') || 'ganon';
+    var opt = sel.querySelector('option[value="' + v + '"]');
+    el.textContent = 'GOAL: ' + (opt ? opt.textContent : 'Defeat Ganon').toUpperCase();
+  }
+  window.updateGoalLabel = updateGoalLabel;
   function applyGoal(v) {
     window.trackerSettings.goal = v;
     lsSet('alttp-goal', v);
     if (window._bc) window._bc.postMessage({ type: 'setting', key: 'alttp-goal', value: v });
+    updateGoalLabel();
   }
+  // A goal picked in the launcher reaches this window through storage.
+  window.addEventListener('storage', function (e) {
+    if (e.key !== 'alttp-goal') return;
+    var sel = document.getElementById('set-goal');
+    if (sel && e.newValue) { sel.value = e.newValue; window.trackerSettings.goal = e.newValue; }
+    updateGoalLabel();
+  });
   window.applyGoal = applyGoal;
 
   // ── Simple boolean seed flags ──
@@ -9478,6 +9500,7 @@ if (document.readyState === 'loading') {
     goalSel.value = localStorage.getItem('alttp-goal') || 'ganon';
     window.trackerSettings.goal = goalSel.value;
     goalSel.addEventListener('change', function() { applyGoal(goalSel.value); });
+    updateGoalLabel();
   }
 
   var gtSel = document.getElementById('set-gtcrystals');

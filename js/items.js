@@ -1809,7 +1809,7 @@ function _resetKeyDropTallies() {
         if (typeof deviceAttached !== 'undefined' && deviceAttached) {
             dungeons[k].chestsMax = 0;
             dungeons[k].chestBits = 0;   // travels with chestsMax — see below
-            dungeons[k]._keysPrev = 0;
+            dungeons[k]._keysPrev = 0; dungeons[k]._holdUntil = 0;
             dungeons[k].itemCount = 0;
         }
     });
@@ -3973,7 +3973,24 @@ function processRoomData(data) {
             // the count from before it. On a read where the key count moved, let the
             // fresh count stand; the high-water still guards every other read.
             const keysNow = Math.max(dungeon.smallKeyMax || 0, dungeon.smallKeyCount || 0);
-            if (dungeon._keysSeen === keysNow) items = Math.max(items, dungeon.itemCount || 0);
+            // Boss-key hold (display only). A key with no chest is usually the boss's:
+            // picked up after the kill, while the boss flag lands ~15 s later, after the
+            // prize (MM, Nov 2026: count 1/2 -> 0/2 -> 1/2). Hold the shown count until a
+            // location lands or 30 s pass, then let the fresh count stand. A key within
+            // 1.5 s of a chest is that chest's key and applies at once. Pot and enemy keys
+            // never reach this counter in standard seeds, so they can't start a hold.
+            const _nowHold = Date.now();
+            if (_chestRise > 0) dungeon._lastChestAt = _nowHold;
+            let _release = false;
+            if (_keyRise > 0 && _chestRise === 0 &&
+                !(dungeon._lastChestAt && _nowHold - dungeon._lastChestAt <= 1500)) {
+                dungeon._holdUntil = _nowHold + 30000;
+            } else if (dungeon._holdUntil && (_chestRise > 0 || _nowHold >= dungeon._holdUntil)) {
+                dungeon._holdUntil = 0;
+                _release = true;
+            }
+            if (dungeon._holdUntil) items = Math.max(items, dungeon.itemCount || 0);
+            else if (!_release && dungeon._keysSeen === keysNow) items = Math.max(items, dungeon.itemCount || 0);
             dungeon._keysSeen = keysNow;
 
 
@@ -4766,7 +4783,7 @@ function resetItemTracker() {
         d.itemCount     = 0;
         d.chestsMax     = 0;
         d.chestBits     = 0;
-        d._keysPrev = 0;
+        d._keysPrev = 0; d._holdUntil = 0;
         d.skipped       = 0;
         d.bigkeyState   = 0;
         d.compassState  = 0;

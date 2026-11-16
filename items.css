@@ -553,8 +553,16 @@ html.no-boss-shuffle .boss-circle:hover {
 .connection-status {
     font-size: 10px;
     color: #95a5a6;
-    flex: 1;
+    flex: 1 0 auto;
     text-align: center;
+    white-space: nowrap;        /* "● Connected" wrapped onto two lines in view 1 */
+}
+
+/* Very narrow windows: Settings and Broadcast show their icons only; the title
+   attribute still names them on hover. The full labels need about 410 px. */
+@media (max-width: 420px) {
+    .tracker-bottom-bar .btn-text { display: none; }
+    .tracker-bottom-bar .item-settings-btn { padding: 0 6px; }
 }
 
 .mode-label {
