@@ -269,6 +269,10 @@ input:focus, select:focus { outline: none; border-color: #4dff88; }
   box-shadow: 0 6px 18px rgba(0,0,0,0.7);
 }
 #other-settings-panel.open { display: block; }
+/* At least as wide as its button, wider when a row needs it: "Master Sword
+   Pedestal" in the Goal list ran 24px past the edge (Nov 2026). It floats over
+   the next column, so the extra width costs nothing. */
+#other-settings-panel { right: auto; min-width: 100%; width: max-content; box-sizing: border-box; }
 #other-settings-panel .check-row { display: flex; margin: 5px 0; }
 /* Key Drop covers both halves, so the two specific flags are disabled while it
    is on — dimmed rather than hidden, so it's clear what it stands for. */
