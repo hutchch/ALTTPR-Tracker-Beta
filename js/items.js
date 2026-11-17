@@ -588,7 +588,6 @@ window.setDungeonPrize = function(key, name) {
     var idx = window.PRIZE_IMAGE_CYCLE.indexOf(name + '0.png');
     if (idx < 0 || !dungeons[key]) return;
     dungeons[key].prizeState = idx;
-    dbgLog('prize set ' + key + ' ' + name + ' idx=' + idx);
     var slot = document.querySelector('[data-dungeon-key="' + key + '"]');
     var prizeImg = slot && slot.querySelector('.prize-img');
     if (prizeImg) prizeImg.src = (typeof BASE_URL !== 'undefined' ? BASE_URL + '/' : '') + window.PRIZE_IMAGE_CYCLE[idx];
@@ -3797,17 +3796,6 @@ function processSeedCounts(data) {
     if (window.broadcastItemSnap) window.broadcastItemSnap();
 }
 
-// Debug log: does nothing unless localStorage 'alttp-debug-log' is 'yes'. In the
-// app the line is appended to ~/Documents/ALTTPR-Tracker-debug.log (main.js).
-function dbgLog(msg) {
-    try { if (localStorage.getItem('alttp-debug-log') !== 'yes') return; } catch (e) { return; }
-    // Local time, sortable (2026-11-13T07:58:12.345), so it lines up with the player's clock.
-    const d = new Date();
-    const line = d.toLocaleString('sv-SE').replace(' ', 'T') + '.' + String(d.getMilliseconds()).padStart(3, '0') + ' ' + msg;
-    console.log('[DBG] ' + line);
-    if (window.electronAPI && window.electronAPI.debugLog) window.electronAPI.debugLog(line);
-}
-
 function processRoomData(data) {
     // A save & quit blanks the room-flag block for a moment; merge it with what
     // we already had so the chest counts don't drop and come back.
@@ -3938,7 +3926,7 @@ function processRoomData(data) {
             // game's timing, which varies: a torch key lands 2-4 s before its flag, a boss
             // key 16-19 s before. Each gap overcounted. A pot or enemy key can still dip the
             // count by one until the dungeon is done; an overcount is worse.
-            // keyRise/chestRise are kept for the debug log only.
+            // keyRise/chestRise feed the boss-key hold below.
             const keysHeld = Math.max(dungeon.smallKeyMax || 0, dungeon.smallKeyCount || 0);
             const _chestRise = chestsOpened - _maxBefore;
             const _keyRise = keysHeld - (dungeon._keysPrev || 0);
@@ -3992,19 +3980,6 @@ function processRoomData(data) {
             if (dungeon._holdUntil) items = Math.max(items, dungeon.itemCount || 0);
             else if (!_release && dungeon._keysSeen === keysNow) items = Math.max(items, dungeon.itemCount || 0);
             dungeon._keysSeen = keysNow;
-
-
-            // Debug log: one line whenever this dungeon's state changes.
-            const _slot = document.querySelector(`[data-dungeon-key="${key}"]`);
-            const _pi = _slot && _slot.querySelector('.prize-img');
-            const _boss = dungeon.bossAddr ? ((data[dungeon.bossAddr] & 0x08) !== 0 ? 1 : 0) : 'n/a';
-            const _line = [key, 'boss=' + _boss, 'prizeImg=' + (_pi ? _pi.src.split('/').pop() : 'none'),
-                'prizeState=' + dungeon.prizeState, 'auto=' + !!dungeon._prizeAuto,
-                'chestsOpened=' + chestsOpened, 'map=' + dungeon.mapState, 'compass=' + dungeon.compassState,
-                'bigkey=' + dungeon.bigkeyState, 'keysMax=' + dungeon.smallKeyMax, 'keysNow=' + dungeon.smallKeyCount,
-                'maxItems=' + dungeon.maxItems, 'items=' + items, 'itemCount=' + dungeon.itemCount,
-                'chestsMax=' + dungeon.chestsMax, 'maxBefore=' + _maxBefore, 'chestRise=' + _chestRise, 'keyRise=' + _keyRise, 'diFlags=' + JSON.stringify(diFlags)].join(' ');
-            if (_line !== dungeon._dbgLast) { dungeon._dbgLast = _line; dbgLog('dungeon ' + _line); }
 
             // Update if changed
             if (items !== dungeon.itemCount) {
@@ -5029,19 +5004,27 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
-// Green dot on the dungeon Link is in (item tracker only). Default on, off in race mode.
+// The dungeon Link is in: its label takes the chosen colour (item tracker only).
+// Replaced the green dot, Nov 2026. Off by default, always off in race mode. The setting
+// keeps its old 'dng-dot' storage key so an earlier choice carries over.
 (function () {
-  function dotOn() {
+  function hereOn() {
     if (window._raceMode) return false;
     var v = localStorage.getItem('alttp-itemtracker-dng-dot');
-    return v === null ? true : v === 'true';
+    return v === 'true';
   }
   setInterval(function () {
-    document.querySelectorAll('.dng-here-dot').forEach(function (d) { d.remove(); });
+    var col = localStorage.getItem('alttp-itemtracker-dng-color') || '#3ddc5a';
+    document.documentElement.style.setProperty('--dng-here-color', col);
+    // The Y Item box's colour rides along (items.css .yitem-equipped).
+    document.documentElement.style.setProperty('--yitem-color',
+      localStorage.getItem('alttp-itemtracker-yitem-color') || '#ffd54a');
     var key = window._currentDungeon;
-    if (!key || key === 'hc' || key === 'ct' || !dotOn()) return;   // HC and CT have no dungeon box
-    var slot = document.querySelector('.dungeon-slot[data-dungeon-key="' + key + '"]');
-    if (slot) { var d = document.createElement('span'); d.className = 'dng-here-dot'; slot.appendChild(d); }
+    if (!key || key === 'hc' || key === 'ct' || !hereOn()) key = null;   // HC and CT left out (Nov 2026)
+    document.querySelectorAll('.dungeon-slot').forEach(function (slot) {
+      var lbl = slot.querySelector('.dungeon-label');
+      if (lbl) lbl.classList.toggle('dng-here', slot.getAttribute('data-dungeon-key') === key);
+    });
   }, 500);
 })();
 

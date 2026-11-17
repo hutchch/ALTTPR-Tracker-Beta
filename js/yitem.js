@@ -1,9 +1,9 @@
 // Y-item highlight: reads the item equipped to Y (WRAM $7E0202 = SNI address F50202)
 // and hands the byte to the page. Same SNI connection as the other trackers.
 (function () {
-  // Settings page toggle; on unless the user turned it off.
+  // Settings page toggle; off unless the user turned it on (Chris, Nov 2026).
   window.yitemEnabled = function () {
-    try { return localStorage.getItem('alttp-itemtracker-yitem') !== 'false'; } catch (e) { return true; }
+    try { return localStorage.getItem('alttp-itemtracker-yitem') === 'true'; } catch (e) { return false; }
   };
   window.yitemWatch = function (onValue) {
     var ws = null, timer = null, waiting = false;

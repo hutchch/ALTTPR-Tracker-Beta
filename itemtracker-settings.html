@@ -165,7 +165,9 @@ html, body { margin: 0; background: #1a1a1a; min-height: 100%; overflow-x: hidde
         <h4>Highlights</h4>
         <div class="its-row">
           <label><input type="checkbox" id="item-opt-yitem"> Y Item box</label>
-          <label><input type="checkbox" id="item-opt-dng-dot"> Current dungeon dot</label>
+          <input type="color" class="its-color-picker" id="item-opt-yitem-color" value="#ffd54a" title="Colour of the Y Item box">
+          <label><input type="checkbox" id="item-opt-dng-dot"> Current dungeon label</label>
+          <input type="color" class="its-color-picker" id="item-opt-dng-color" value="#3ddc5a" title="Colour of the current dungeon's label">
         </div>
       </div>
 
@@ -219,7 +221,7 @@ html, body { margin: 0; background: #1a1a1a; min-height: 100%; overflow-x: hidde
 </div>
 
 <script>window.IS_ITEM_SETTINGS_PAGE = true;</script>
-<script src="js/item-settings.js?v=5"></script>
+<script src="js/item-settings.js?v=8"></script>
 <script>
 // The tracker owns the item state these touch; here they are no-ops.
 function refreshItemFills() {}
